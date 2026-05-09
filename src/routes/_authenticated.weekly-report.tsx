@@ -144,7 +144,7 @@ function WeeklyReportPage() {
             <Button variant="outline" size="icon" onClick={() => onChangeWeek(1)}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onChangeWeek(0) || setWeekStart(getWeekStart())} className="ml-2">
+            <Button variant="ghost" size="sm" onClick={() => setWeekStart(getWeekStart())} className="ml-2">
               This week
             </Button>
           </div>
