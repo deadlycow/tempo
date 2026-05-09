@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWeeklyReportRouteImport } from './routes/_authenticated.weekly-report'
+import { Route as AuthenticatedSentRouteImport } from './routes/_authenticated.sent'
 import { Route as AuthenticatedPendingRouteImport } from './routes/_authenticated.pending'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
@@ -37,6 +38,11 @@ const AuthenticatedWeeklyReportRoute =
     path: '/weekly-report',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedSentRoute = AuthenticatedSentRouteImport.update({
+  id: '/sent',
+  path: '/sent',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedPendingRoute = AuthenticatedPendingRouteImport.update({
   id: '/pending',
   path: '/pending',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/pending': typeof AuthenticatedPendingRoute
+  '/sent': typeof AuthenticatedSentRoute
   '/weekly-report': typeof AuthenticatedWeeklyReportRoute
 }
 export interface FileRoutesByTo {
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/pending': typeof AuthenticatedPendingRoute
+  '/sent': typeof AuthenticatedSentRoute
   '/weekly-report': typeof AuthenticatedWeeklyReportRoute
 }
 export interface FileRoutesById {
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/pending': typeof AuthenticatedPendingRoute
+  '/_authenticated/sent': typeof AuthenticatedSentRoute
   '/_authenticated/weekly-report': typeof AuthenticatedWeeklyReportRoute
 }
 export interface FileRouteTypes {
@@ -87,9 +96,17 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/pending'
+    | '/sent'
     | '/weekly-report'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/dashboard' | '/history' | '/pending' | '/weekly-report'
+  to:
+    | '/'
+    | '/login'
+    | '/dashboard'
+    | '/history'
+    | '/pending'
+    | '/sent'
+    | '/weekly-report'
   id:
     | '__root__'
     | '/'
@@ -98,6 +115,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/history'
     | '/_authenticated/pending'
+    | '/_authenticated/sent'
     | '/_authenticated/weekly-report'
   fileRoutesById: FileRoutesById
 }
@@ -137,6 +155,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWeeklyReportRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/sent': {
+      id: '/_authenticated/sent'
+      path: '/sent'
+      fullPath: '/sent'
+      preLoaderRoute: typeof AuthenticatedSentRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/pending': {
       id: '/_authenticated/pending'
       path: '/pending'
@@ -165,6 +190,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedPendingRoute: typeof AuthenticatedPendingRoute
+  AuthenticatedSentRoute: typeof AuthenticatedSentRoute
   AuthenticatedWeeklyReportRoute: typeof AuthenticatedWeeklyReportRoute
 }
 
@@ -172,6 +198,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedPendingRoute: AuthenticatedPendingRoute,
+  AuthenticatedSentRoute: AuthenticatedSentRoute,
   AuthenticatedWeeklyReportRoute: AuthenticatedWeeklyReportRoute,
 }
 
