@@ -1,0 +1,132 @@
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
+import { useState, type FormEvent } from "react";
+import { Clock3, ArrowRight } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/login")({
+  component: LoginPage,
+});
+
+const demoAccounts = [
+  { email: "anna@acme.co", role: "Employee" },
+  { email: "karin@acme.co", role: "Team Leader" },
+];
+
+function LoginPage() {
+  const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("demo");
+  const [loading, setLoading] = useState(false);
+
+  if (isAuthenticated) return <Navigate to="/dashboard" />;
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await login(email);
+      toast.success("Welcome back");
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="grid min-h-screen w-full lg:grid-cols-2">
+      <div className="hidden bg-sidebar p-12 text-sidebar-foreground lg:flex lg:flex-col lg:justify-between">
+        <div className="flex items-center gap-3 text-sidebar-primary-foreground">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary">
+            <Clock3 className="h-5 w-5" />
+          </div>
+          <span className="text-lg font-semibold tracking-tight">TimeTrack</span>
+        </div>
+
+        <div className="space-y-6">
+          <h2 className="text-4xl font-semibold leading-tight tracking-tight text-sidebar-primary-foreground">
+            Time reporting,<br />without the friction.
+          </h2>
+          <p className="max-w-md text-sidebar-foreground/70">
+            Submit weekly hours, track verification status, and let team leaders approve and forward reports — all in one workspace.
+          </p>
+          <div className="grid grid-cols-3 gap-4 pt-4">
+            {[
+              { v: "12k+", l: "Hours tracked" },
+              { v: "98%", l: "On-time submission" },
+              { v: "5min", l: "Avg report time" },
+            ].map((s) => (
+              <div key={s.l} className="rounded-xl border border-sidebar-border bg-sidebar-accent/40 p-4">
+                <p className="text-2xl font-semibold text-sidebar-primary-foreground">{s.v}</p>
+                <p className="text-xs text-sidebar-foreground/60">{s.l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-xs text-sidebar-foreground/50">© {new Date().getFullYear()} TimeTrack. All rights reserved.</p>
+      </div>
+
+      <div className="flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm space-y-8">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Sign in to your account</h1>
+            <p className="text-sm text-muted-foreground">Enter your work email to continue.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                required
+                autoComplete="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Sign in"} <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </form>
+
+          <div className="rounded-xl border bg-muted/40 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Demo accounts</p>
+            <div className="mt-3 space-y-2">
+              {demoAccounts.map((a) => (
+                <button
+                  key={a.email}
+                  type="button"
+                  onClick={() => setEmail(a.email)}
+                  className="flex w-full items-center justify-between rounded-lg border bg-card px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+                >
+                  <span className="font-medium">{a.email}</span>
+                  <span className="text-xs text-muted-foreground">{a.role}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
