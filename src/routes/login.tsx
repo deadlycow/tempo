@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { LoginRequest } from "@/types/requests/AuthRequst";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -20,6 +21,7 @@ function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [user, setUser] = useState<LoginRequest>({email: "", password:""})
   const [password, setPassword] = useState("demo");
   const [loading, setLoading] = useState(false);
 
@@ -29,7 +31,8 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(email);
+      // await login(email);
+      await login(user);
       toast.success("Welcome back");
       navigate({ to: "/dashboard" });
     } catch (err) {
@@ -87,7 +90,8 @@ function LoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                // onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setUser(prev => ({...prev, email: e.target.value}))}
                 placeholder="you@company.com"
                 required
                 autoComplete="email"
@@ -99,7 +103,8 @@ function LoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                // onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => setUser(prev => ({...prev, password: e.target.value}))}
                 placeholder="••••••••"
                 autoComplete="current-password"
               />

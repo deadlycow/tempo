@@ -98,14 +98,6 @@ function WeeklyReportPage() {
     navigate({ to: "/history" });
   };
 
-  // Continue working here!
-  // const onSubmit = () => {
-  //   const err = validate();
-  //   if (err) return toast.error(err)
-    
-  //   const {data: }
-  // }
-
   const total = totalHours(entries);
   const days = Array.from({ length: 7 }, (_, i) => isoDate(addDays(weekStart, i)));
 
