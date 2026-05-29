@@ -121,7 +121,10 @@ function LoginPage() {
                 <button
                   key={a.email}
                   type="button"
-                  onClick={() => setEmail(a.email)}
+                  onClick={() => {setEmail(a.email)
+                    setUser(prev => ({...prev, email: a.email}))
+                    setUser(prev => ({...prev, password: "demo"}))
+                  }}
                   className="flex w-full items-center justify-between rounded-lg border bg-card px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
                 >
                   <span className="font-medium">{a.email}</span>
