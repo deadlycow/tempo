@@ -47,11 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (user: LoginRequest): Promise<AuthResponse> => {
     const normalizedEmail = user.email.toLowerCase().trim()
-    console.log("user", user)
-    console.log("users", users)
-    console.log("normalizedEmail", normalizedEmail)
     const found = users.find((u) => u.email.toLowerCase() === normalizedEmail)
-    console.log("found", found) 
     if (found){
       setUser(found)
       localStorage.setItem("token", "demo")
