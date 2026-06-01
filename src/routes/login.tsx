@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { Clock3, ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -20,18 +20,17 @@ const demoAccounts = [
 function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
   const [user, setUser] = useState<LoginRequest>({ email: "", password: "" })
-  const [password, setPassword] = useState("demo");
+  // const [email, setEmail] = useState("");
+  // const [password, setPassword] = useState("demo");
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) return <Navigate to="/dashboard" />;
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // await login(email);
       await login(user);
       toast.success("Welcome back");
       navigate({ to: "/dashboard" });
@@ -89,10 +88,10 @@ function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                value={email}
+                value={user.email}
                 // onChange={(e) => setEmail(e.target.value)}
                 onChange={(e) => {
-                  setEmail(e.target.value)
+                  // setEmail(e.target.value)
                   setUser(prev => ({ ...prev, email: e.target.value }))
                 }}
                 placeholder="you@company.com"
@@ -105,10 +104,10 @@ function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                value={password}
+                value={user.password}
                 // onChange={(e) => setPassword(e.target.value)}
                 onChange={(e) => {
-                  setPassword(e.target.value)
+                  // setPassword(e.target.value)
                   setUser(prev => ({ ...prev, password: e.target.value }))
                 }}
                 placeholder="••••••••"
@@ -128,7 +127,7 @@ function LoginPage() {
                   key={a.email}
                   type="button"
                   onClick={() => {
-                    setEmail(a.email)
+                    // setEmail(a.email)
                     setUser(prev => ({ ...prev, email: a.email }))
                     setUser(prev => ({ ...prev, password: "demo" }))
                   }}

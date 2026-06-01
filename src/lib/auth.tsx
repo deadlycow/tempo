@@ -8,7 +8,6 @@ import { AuthResponse } from "@/types/responses/AuthResponse";
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  // login: (email: string) => Promise<User>;
   login: (user: LoginRequest) => Promise<AuthResponse>;
   logout: () => void;
 }
@@ -67,10 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(apiUser)
 
     return response
-    // const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim());
-    // if (!found) throw new Error("No account found for that email");
-    // setUser(found);
-    // return found;
   }, []);
 
   const logout = useCallback(() => setUser(null), []);
