@@ -21,7 +21,7 @@ function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
-  const [user, setUser] = useState<LoginRequest>({email: "", password:""})
+  const [user, setUser] = useState<LoginRequest>({ email: "", password: "" })
   const [password, setPassword] = useState("demo");
   const [loading, setLoading] = useState(false);
 
@@ -91,7 +91,10 @@ function LoginPage() {
                 type="email"
                 value={email}
                 // onChange={(e) => setEmail(e.target.value)}
-                onChange={(e) => setUser(prev => ({...prev, email: e.target.value}))}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setUser(prev => ({ ...prev, email: e.target.value }))
+                }}
                 placeholder="you@company.com"
                 required
                 autoComplete="email"
@@ -104,7 +107,10 @@ function LoginPage() {
                 type="password"
                 value={password}
                 // onChange={(e) => setPassword(e.target.value)}
-                onChange={(e) => setUser(prev => ({...prev, password: e.target.value}))}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  setUser(prev => ({ ...prev, password: e.target.value }))
+                }}
                 placeholder="••••••••"
                 autoComplete="current-password"
               />
@@ -121,7 +127,11 @@ function LoginPage() {
                 <button
                   key={a.email}
                   type="button"
-                  onClick={() => setEmail(a.email)}
+                  onClick={() => {
+                    setEmail(a.email)
+                    setUser(prev => ({ ...prev, email: a.email }))
+                    setUser(prev => ({ ...prev, password: "demo" }))
+                  }}
                   className="flex w-full items-center justify-between rounded-lg border bg-card px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
                 >
                   <span className="font-medium">{a.email}</span>

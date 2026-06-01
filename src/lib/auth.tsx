@@ -33,14 +33,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else window.localStorage.removeItem(KEY);
   }, [user]);
 
-  const login = useCallback(async (user: LoginRequest) => {
+  const mockAuthResponse = (found: User): AuthResponse => {
+    const role = "role" in found && typeof found.role === "string" ? found.role : "employee"
+    return {
+      accessToken: "demo",
+      userId: found.id,
+      email: found.email,
+      userName: found.name,
+      role,
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
+    }
+  }
+
+  const login = useCallback(async (user: LoginRequest): Promise<AuthResponse> => {
     const normalizedEmail = user.email.toLowerCase().trim()
-
     const found = users.find((u) => u.email.toLowerCase() === normalizedEmail)
-
     if (found){
       setUser(found)
-      return found
+      localStorage.setItem("token", "demo")
+      return mockAuthResponse(found)
     }
     
     const response = await logIn(user)
@@ -50,7 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: response.userName ?? "No name",
       email: response.email,
     }
-    
+
+    localStorage.setItem("token", response.accessToken)
+
+    setUser(apiUser)
+
+    return response
     // const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim());
     // if (!found) throw new Error("No account found for that email");
     // setUser(found);
