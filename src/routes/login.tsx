@@ -15,6 +15,7 @@ export const Route = createFileRoute("/login")({
 const demoAccounts = [
   { email: "anna@acme.co", role: "Employee" },
   { email: "karin@acme.co", role: "Team Leader" },
+  { email: "admin@acme.co", role: "Admin" },
 ];
 
 function LoginPage() {

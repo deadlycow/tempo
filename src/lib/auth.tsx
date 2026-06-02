@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { users } from "./mock-data";
 import type { User } from "./types";
+
 import { LoginRequest } from "@/types/requests/AuthRequst";
 import { logIn } from "@/services/authService";
 import { UserResponse } from "@/types/responses/UserResponse";
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       id: userData.userId,
       name: userData.userName ?? "No name",
       email: userData.email,
-      // role: userData.role,
+      role: userData.role,
     }
 
     setUser(apiUser)

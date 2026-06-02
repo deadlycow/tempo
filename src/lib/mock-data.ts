@@ -6,6 +6,7 @@ export const users: User[] = [
   { id: "u3", name: "Sofia Berg", email: "sofia@acme.co", role: "employee", team: "Platform" },
   { id: "u4", name: "Marcus Nyström", email: "marcus@acme.co", role: "employee", team: "Platform" },
   { id: "u5", name: "Karin Holm", email: "karin@acme.co", role: "team_leader", team: "Platform" },
+  { id: "u6", name: "Oliver Admin", email: "admin@acme.co", role: "admin", team: "Operations" },
 ];
 
 export const projects: Project[] = [
