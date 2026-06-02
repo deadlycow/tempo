@@ -3,12 +3,13 @@ import { users } from "./mock-data";
 import type { User } from "./types";
 import { LoginRequest } from "@/types/requests/AuthRequst";
 import { logIn } from "@/services/authService";
-import { AuthResponse } from "@/types/responses/AuthResponse";
+import { UserResponse } from "@/types/responses/UserResponse";
+import { me } from "@/services/userService";
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  login: (user: LoginRequest) => Promise<AuthResponse>;
+  login: (user: LoginRequest) => Promise<UserResponse>;
   logout: () => void;
 }
 
@@ -32,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else window.localStorage.removeItem(KEY);
   }, [user]);
 
-  const mockAuthResponse = (found: User): AuthResponse => {
+  const mockAuthResponse = (found: User): UserResponse => {
     const role = "role" in found && typeof found.role === "string" ? found.role : "employee"
     return {
       userId: found.id,
@@ -42,25 +43,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const login = useCallback(async (user: LoginRequest): Promise<AuthResponse> => {
+  const login = useCallback(async (user: LoginRequest): Promise<UserResponse> => {
     const normalizedEmail = user.email.toLowerCase().trim()
     const found = users.find((u) => u.email.toLowerCase() === normalizedEmail)
-    if (found){
+    if (found) {
       setUser(found)
       return mockAuthResponse(found)
     }
-    
+
     const response = await logIn(user)
+    if (!response) throw new Error("Login failed")
+
+    const userData: UserResponse = await me()
 
     const apiUser: User = {
-      id: response.userId,
-      name: response.userName ?? "No name",
-      email: response.email,
+      id: userData.userId,
+      name: userData.userName ?? "No name",
+      email: userData.email,
+      // role: userData.role,
     }
 
     setUser(apiUser)
 
-    return response
+    return apiUser
   }, []);
 
   const logout = useCallback(() => setUser(null), []);

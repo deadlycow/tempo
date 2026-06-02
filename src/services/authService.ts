@@ -1,10 +1,10 @@
 import type { LoginRequest, RegisterRequest } from "@/types/requests/AuthRequst"
-import type { AuthResponse } from "@/types/responses/AuthResponse"
+// import type { AuthResponse } from "@/types/responses/UserResponse"
 
 
 const baseUrl = "http://localhost:5078/"
 
-const logIn = async (data: LoginRequest): Promise<AuthResponse> => {
+const logIn = async (data: LoginRequest): Promise<boolean> => {
   const res = await fetch(`${baseUrl}api/auth/login`, {
     "method": "POST",
     "credentials": "include",
@@ -16,7 +16,7 @@ const logIn = async (data: LoginRequest): Promise<AuthResponse> => {
   if (!res.ok)
     throw new Error("Login failed")
 
-  return res.json()
+  return res.ok
 }
 
 const registerUser = async (data: RegisterRequest) => {

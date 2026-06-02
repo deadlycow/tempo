@@ -3,7 +3,7 @@ export type Role = "employee" | "team_leader";
 export type ReportStatus = "draft" | "submitted" | "verified" | "rejected" | "sent";
 
 export interface User {
-  id: string;
+  id?: string;
   name: string;
   email: string;
   // role: Role;
