@@ -7,6 +7,7 @@ const baseUrl = "http://localhost:5078/"
 const logIn = async (data: LoginRequest): Promise<AuthResponse> => {
   const res = await fetch(`${baseUrl}api/auth/login`, {
     "method": "POST",
+    "credentials": "include",
     "headers": {
       "Content-Type": "application/json"
     },

@@ -35,12 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const mockAuthResponse = (found: User): AuthResponse => {
     const role = "role" in found && typeof found.role === "string" ? found.role : "employee"
     return {
-      accessToken: "demo",
       userId: found.id,
       email: found.email,
       userName: found.name,
       role,
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
     }
   }
 
@@ -49,7 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const found = users.find((u) => u.email.toLowerCase() === normalizedEmail)
     if (found){
       setUser(found)
-      localStorage.setItem("token", "demo")
       return mockAuthResponse(found)
     }
     
@@ -60,8 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: response.userName ?? "No name",
       email: response.email,
     }
-
-    localStorage.setItem("token", response.accessToken)
 
     setUser(apiUser)
 
