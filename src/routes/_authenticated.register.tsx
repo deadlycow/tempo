@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type SubmitEvent } from "react";
 import { UserPlus, ShieldAlert, Users } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { RegisterRequest } from "@/types/requests/AuthRequest";
+import { registerUser } from "@/services/userService";
 
 export const Route = createFileRoute("/_authenticated/register")({
   component: RegisterPage,
@@ -40,22 +42,28 @@ function RegisterPage() {
     () =>
       user?.role === "admin"
         ? [
-            { value: "employee", label: "Employee" },
-            { value: "team_leader", label: "Team Leader" },
-          ]
+          { value: "employee", label: "Employee" },
+          { value: "team_leader", label: "Team Leader" },
+        ]
         : [{ value: "employee", label: "Employee" }],
     [user?.role]
   );
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [team, setTeam] = useState(user?.team ?? "");
-  const [role, setRole] = useState<Role>("employee");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const [form, setForm] = useState<RegisterRequest>({
+    name: "",
+    email: "",
+    password: "Bytmig123!",
+    // team is optional, no use for it yet
+    role: "employee"
+  })
+
+  const handleSubmit = (e: SubmitEvent) => {
     e.preventDefault();
-    const parsed = schema.safeParse({ name, email, team, role });
+    const parsed = schema.safeParse(form)
+    console.log(parsed.error)
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message ?? "Invalid input");
       return;
@@ -72,10 +80,17 @@ function RegisterPage() {
     setSubmitting(true);
     try {
       const created = addUser(parsed.data);
+      const response = registerUser(form)
+      console.log(response)
+      if (!response)
+        toast.error("Failed to register user")
       toast.success(`${created.name} added as ${roleLabel(created.role)}`);
-      setName("");
-      setEmail("");
-      setRole("employee");
+      setForm({
+        name: "",
+        email: "",
+        password: "",
+        role: "employee"
+      })
     } finally {
       setSubmitting(false);
     }
@@ -110,8 +125,8 @@ function RegisterPage() {
                 <Label htmlFor="name">Full name</Label>
                 <Input
                   id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={form.name}
+                  onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Jane Andersson"
                   required
                   maxLength={80}
@@ -122,8 +137,8 @@ function RegisterPage() {
                 <Input
                   id="email"
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={form.email}
+                  onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="jane@acme.co"
                   required
                   maxLength={160}
@@ -142,7 +157,7 @@ function RegisterPage() {
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="role">Role</Label>
-                <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+                <Select value={form.role} onValueChange={(v) => setForm(prev => ({ ...prev, role: v as Role }))}>
                   <SelectTrigger id="role">
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>

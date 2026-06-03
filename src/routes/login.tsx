@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { LoginRequest } from "@/types/requests/AuthRequst";
+import { LoginRequest } from "@/types/requests/AuthRequest";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -22,8 +22,6 @@ function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [user, setUser] = useState<LoginRequest>({ email: "", password: "" })
-  // const [email, setEmail] = useState("");
-  // const [password, setPassword] = useState("demo");
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) return <Navigate to="/dashboard" />;

@@ -2,10 +2,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { users } from "./mock-data";
 import type { User } from "./types";
 
-import { LoginRequest } from "@/types/requests/AuthRequst";
+import { LoginRequest } from "@/types/requests/AuthRequest";
 import { logIn } from "@/services/authService";
 import { UserResponse } from "@/types/responses/UserResponse";
-import { me } from "@/services/userService";
+import { me } from "@/services/userService"
 
 interface AuthState {
   user: User | null;
@@ -37,18 +37,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const mockAuthResponse = (found: User): UserResponse => {
     const role = "role" in found && typeof found.role === "string" ? found.role : "employee"
     return {
-      userId: found.id,
       email: found.email,
       userName: found.name,
-      role,
+      role: role,
     }
   }
 
   const login = useCallback(async (user: LoginRequest): Promise<UserResponse> => {
+
     const normalizedEmail = user.email.toLowerCase().trim()
     const found = users.find((u) => u.email.toLowerCase() === normalizedEmail)
     if (found) {
       setUser(found)
+      console.log("Using mock auth response for", found.role)
       return mockAuthResponse(found)
     }
 
@@ -58,12 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userData: UserResponse = await me()
 
     const apiUser: User = {
-      id: userData.userId,
       name: userData.userName ?? "No name",
       email: userData.email,
       role: userData.role,
     }
-
     setUser(apiUser)
 
     return apiUser

@@ -3,6 +3,7 @@ import type { CreateProjectRequest, GetProjectRequest } from "@/types/requests/P
 const createProject = async (data: CreateProjectRequest) => {
   const res = await fetch("api/project", {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
@@ -12,8 +13,8 @@ const createProject = async (data: CreateProjectRequest) => {
 }
 const getProject = async (data: GetProjectRequest) => {
   const res = await fetch("api/project", {
-
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json"
     },
