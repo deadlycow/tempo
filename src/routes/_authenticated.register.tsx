@@ -53,17 +53,13 @@ function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState<RegisterRequest>({
-    name: "",
-    email: "",
-    password: "Bytmig123!",
-    // team is optional, no use for it yet
-    role: "employee"
-  })
+    name: "", email: "", password: "", role: ""
+  }
+  )
 
   const handleSubmit = (e: SubmitEvent) => {
     e.preventDefault();
     const parsed = schema.safeParse(form)
-    console.log(parsed.error)
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message ?? "Invalid input");
       return;
@@ -79,20 +75,17 @@ function RegisterPage() {
     }
     setSubmitting(true);
     try {
-      const created = addUser(parsed.data);
+      // const created = addUser(parsed.data);
+      setForm(prev => ({ ...prev, password: "Bytmig123!" }));
+
       const response = registerUser(form)
-      console.log(response)
       if (!response)
-        toast.error("Failed to register user")
-      toast.success(`${created.name} added as ${roleLabel(created.role)}`);
-      setForm({
-        name: "",
-        email: "",
-        password: "",
-        role: "employee"
-      })
+        toast.error(`Failed to register ${form.name}`)
+      // toast.success(`${created.name} added as ${roleLabel(created.role)}`);
     } finally {
+      toast.success(`${form.name} registered successfully!`)
       setSubmitting(false);
+      setForm({ name: "", email: "", password: "", role: "" })
     }
   };
 

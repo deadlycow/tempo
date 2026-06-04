@@ -1,7 +1,7 @@
 import type { UserResponse } from '@/types/responses/UserResponse'
 import type { RegisterRequest } from '@/types/requests/AuthRequest'
 
-const baseUrl = 'http://localhost:5078/'
+const baseUrl = "http://localhost:5078/"
 
 const me = async (): Promise<UserResponse> => {
     const response = await fetch(`${baseUrl}api/users/me`, {
@@ -17,7 +17,6 @@ const me = async (): Promise<UserResponse> => {
 }
 
 const registerUser = async (data: RegisterRequest) => {
-    console.log("Registering user with data:", data)
     const response = await fetch(`${baseUrl}api/auth/register`, {
         method: 'POST',
         credentials: 'include',
@@ -28,7 +27,7 @@ const registerUser = async (data: RegisterRequest) => {
     })
     if (!response.ok)
         throw new Error('Registration failed')
-    return response.json();
+    return response.ok
 }
 
 export {
