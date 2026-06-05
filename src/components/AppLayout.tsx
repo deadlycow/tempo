@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Clock3, LayoutDashboard, History, Inbox, Send, LogOut, Menu, X, FileEdit, UserPlus } from "lucide-react";
+import { Clock3, LayoutDashboard, History, Inbox, Send, LogOut, Menu, X, FileEdit, UserPlus, FolderCog } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,11 @@ const leaderNav: NavItem[] = [
   { to: "/register", label: "Add User", icon: UserPlus },
 ];
 
+const projectNav: NavItem[] = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/project", label: "Project", icon: FolderCog }
+]
+
 const adminNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/history", label: "History", icon: History },
@@ -39,7 +44,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   if (!user) return null;
   const items =
-   user.role === "admin" ? adminNav : user.role === "team_leader" ?  leaderNav : employeeNav;
+    user.role === "admin" ? adminNav : user.role === "project_manager" ? projectNav : user.role === "team_leader" ? leaderNav : employeeNav;
 
   const handleLogout = () => {
     logout();

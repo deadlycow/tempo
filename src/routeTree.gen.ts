@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWeeklyReportRouteImport } from './routes/_authenticated.weekly-report'
 import { Route as AuthenticatedSentRouteImport } from './routes/_authenticated.sent'
 import { Route as AuthenticatedRegisterRouteImport } from './routes/_authenticated.register'
+import { Route as AuthenticatedProjectRouteImport } from './routes/_authenticated.project'
 import { Route as AuthenticatedPendingRouteImport } from './routes/_authenticated.pending'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
@@ -49,6 +50,11 @@ const AuthenticatedRegisterRoute = AuthenticatedRegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedProjectRoute = AuthenticatedProjectRouteImport.update({
+  id: '/project',
+  path: '/project',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedPendingRoute = AuthenticatedPendingRouteImport.update({
   id: '/pending',
   path: '/pending',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/pending': typeof AuthenticatedPendingRoute
+  '/project': typeof AuthenticatedProjectRoute
   '/register': typeof AuthenticatedRegisterRoute
   '/sent': typeof AuthenticatedSentRoute
   '/weekly-report': typeof AuthenticatedWeeklyReportRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/pending': typeof AuthenticatedPendingRoute
+  '/project': typeof AuthenticatedProjectRoute
   '/register': typeof AuthenticatedRegisterRoute
   '/sent': typeof AuthenticatedSentRoute
   '/weekly-report': typeof AuthenticatedWeeklyReportRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/pending': typeof AuthenticatedPendingRoute
+  '/_authenticated/project': typeof AuthenticatedProjectRoute
   '/_authenticated/register': typeof AuthenticatedRegisterRoute
   '/_authenticated/sent': typeof AuthenticatedSentRoute
   '/_authenticated/weekly-report': typeof AuthenticatedWeeklyReportRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/pending'
+    | '/project'
     | '/register'
     | '/sent'
     | '/weekly-report'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/pending'
+    | '/project'
     | '/register'
     | '/sent'
     | '/weekly-report'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/history'
     | '/_authenticated/pending'
+    | '/_authenticated/project'
     | '/_authenticated/register'
     | '/_authenticated/sent'
     | '/_authenticated/weekly-report'
@@ -181,6 +193,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRegisterRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/project': {
+      id: '/_authenticated/project'
+      path: '/project'
+      fullPath: '/project'
+      preLoaderRoute: typeof AuthenticatedProjectRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/pending': {
       id: '/_authenticated/pending'
       path: '/pending'
@@ -209,6 +228,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedPendingRoute: typeof AuthenticatedPendingRoute
+  AuthenticatedProjectRoute: typeof AuthenticatedProjectRoute
   AuthenticatedRegisterRoute: typeof AuthenticatedRegisterRoute
   AuthenticatedSentRoute: typeof AuthenticatedSentRoute
   AuthenticatedWeeklyReportRoute: typeof AuthenticatedWeeklyReportRoute
@@ -218,6 +238,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedPendingRoute: AuthenticatedPendingRoute,
+  AuthenticatedProjectRoute: AuthenticatedProjectRoute,
   AuthenticatedRegisterRoute: AuthenticatedRegisterRoute,
   AuthenticatedSentRoute: AuthenticatedSentRoute,
   AuthenticatedWeeklyReportRoute: AuthenticatedWeeklyReportRoute,

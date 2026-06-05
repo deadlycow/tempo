@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const role = "role" in found && typeof found.role === "string" ? found.role : "employee"
     return {
       email: found.email,
-      userName: found.name,
+      name: found.name,
       role: role,
     }
   }
@@ -57,9 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!response) throw new Error("Login failed")
 
     const userData: UserResponse = await me()
-
+    
     const apiUser: User = {
-      name: userData.userName ?? "No name",
+      name: userData.name ?? "No name",
       email: userData.email,
       role: userData.role,
     }

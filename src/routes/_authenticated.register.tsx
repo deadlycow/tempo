@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { RegisterRequest } from "@/types/requests/AuthRequest";
 import { registerUser, getAllUsers } from "@/services/userService";
 import { UserResponse } from "@/types/responses/UserResponse";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/register")({
   component: RegisterPage,
@@ -30,12 +30,13 @@ const schema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
   email: z.string().trim().toLowerCase().email("Enter a valid email").max(160),
   team: z.string().trim().max(60).optional(),
-  role: z.enum(["employee", "team_leader"]),
+  role: z.enum(["employee", "team_leader", "project_manager"]),
 });
 
 function RegisterPage() {
   const { user } = useAuth();
   const { users, addUser } = useData();
+  const queryClient = useQueryClient()
 
   const canAccess = user?.role === "admin" || user?.role === "team_leader";
   if (!canAccess) return <Navigate to="/dashboard" />;
@@ -46,6 +47,7 @@ function RegisterPage() {
         ? [
           { value: "employee", label: "Employee" },
           { value: "team_leader", label: "Team Leader" },
+          { value: "project_manager", label: "Project Manager" }
         ]
         : [{ value: "employee", label: "Employee" }],
     [user?.role]
@@ -55,16 +57,14 @@ function RegisterPage() {
   const [team, setTeam] = useState(user?.team ?? "");
   const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState<RegisterRequest>({name: "", email: "", password: "", role: ""})
+  const [form, setForm] = useState<RegisterRequest>({ name: "", email: "", password: "", role: "" })
 
-  const {data: users1 = [], isLoading, error} = useQuery ({
-    queryKey: ["users"],
+  const { data: apiUsers = [], isLoading, error } = useQuery({
+    queryKey: ['users'],
     queryFn: getAllUsers
   })
 
-
-
-  //For 
+  //For now 
   const request = {
     ...form,
     password: "Bytmig123!"
@@ -96,6 +96,7 @@ function RegisterPage() {
       // toast.success(`${created.name} added as ${roleLabel(created.role)}`);
     } finally {
       toast.success(`${form.name} registered successfully!`)
+      queryClient.invalidateQueries({ queryKey: ['users'] })
       setSubmitting(false);
       setForm({ name: "", email: "", password: "", role: "" })
     }
@@ -117,7 +118,7 @@ function RegisterPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        {user?.role === "admin" && (
+        {(user?.role === "admin" || user?.role === "team_leader") && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -175,12 +176,12 @@ function RegisterPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {/* {user?.role === "team_leader" && (
+                  {user?.role === "team_leader" && (
                     <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <ShieldAlert className="h-3.5 w-3.5" />
                       Only an admin can create another team leader.
                     </p>
-                  )} */}
+                  )}
                 </div>
                 <div className="sm:col-span-2">
                   <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
@@ -254,21 +255,19 @@ function RegisterPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             {/* {isLoading && ( <)} */}
-            {users1?.map((u: UserResponse, index) => (
-
+            {apiUsers.map((u: UserResponse, index) => (
               <div
-              key={index}
-              className="flex items-center justify-between rounded-lg border bg-card px-3 py-2"
+                key={index}
+                className="flex items-center justify-between rounded-lg border bg-card px-3 py-2"
               >
-              <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{u.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{u.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+                </div>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {roleLabel(u.role)}
+                </span>
               </div>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-              {roleLabel(u.role)}
-              </span>
-              </div>
-            
             ))}
           </CardContent>
         </Card>
@@ -283,6 +282,8 @@ function roleLabel(role: Role) {
       return "Admin";
     case "team_leader":
       return "Team Leader";
+    case "project_manager":
+      return "Project Manager"
     default:
       return "Employee";
   }

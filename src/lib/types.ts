@@ -1,4 +1,4 @@
-export type Role = "employee" | "team_leader" | "admin";
+export type Role = "employee" | "team_leader" | "admin" | "project_manager";
 
 export type ReportStatus = "draft" | "submitted" | "verified" | "rejected" | "sent";
 
