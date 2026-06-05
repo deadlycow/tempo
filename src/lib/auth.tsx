@@ -3,7 +3,7 @@ import { users } from "./mock-data";
 import type { User } from "./types";
 
 import { LoginRequest } from "@/types/requests/AuthRequest";
-import { logIn } from "@/services/authService";
+import * as authService from "@/services/authService";
 import { UserResponse } from "@/types/responses/UserResponse";
 import { me } from "@/services/userService"
 
@@ -53,11 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return mockAuthResponse(found)
     }
 
-    const response = await logIn(user)
+    const response = await authService.login(user)
     if (!response) throw new Error("Login failed")
 
     const userData: UserResponse = await me()
-    
+
     const apiUser: User = {
       name: userData.name ?? "No name",
       email: userData.email,
@@ -68,7 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return apiUser
   }, []);
 
-  const logout = useCallback(() => setUser(null), []);
+  const logout = useCallback(async () => {
+    await authService.logout()
+    setUser(null)
+  }, []);
 
   const value = useMemo<AuthState>(
     () => ({ user, isAuthenticated: !!user, login, logout }),

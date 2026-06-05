@@ -2,7 +2,7 @@ import type { LoginRequest } from '@/types/requests/AuthRequest'
 
 const baseUrl = "http://localhost:5078/"
 
-const logIn = async (data: LoginRequest): Promise<boolean> => {
+const login = async (data: LoginRequest): Promise<boolean> => {
   const response = await fetch(`${baseUrl}api/auth/login`, {
     method: 'POST',
     credentials: 'include',
@@ -17,6 +17,15 @@ const logIn = async (data: LoginRequest): Promise<boolean> => {
   return response.ok
 }
 
+const logout = async () => {
+  await fetch(`${baseUrl}api/auth/logout`, {
+    method: 'POST',
+    credentials: 'include'
+  }
+  )
+}
+
 export {
-  logIn
+  login,
+  logout
 }
