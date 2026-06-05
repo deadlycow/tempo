@@ -30,7 +30,21 @@ const registerUser = async (data: RegisterRequest) => {
     return response.ok
 }
 
+const getAllUsers = async () : Promise<UserResponse[]> => {
+    const response = await fetch(`${baseUrl}api/users/all`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+    })
+    if (!response.ok)
+        throw new Error('Failed to fetch users')
+    return await response.json()
+}
+
 export {
     me,
-    registerUser
+    registerUser,
+    getAllUsers
 }
