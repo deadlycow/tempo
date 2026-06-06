@@ -10,7 +10,7 @@ import { me } from "@/services/userService"
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  login: (user: LoginRequest) => Promise<UserResponse>;
+  login: (user: LoginRequest) => void;
   logout: () => void;
 }
 
@@ -43,9 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const login = useCallback(async (user: LoginRequest): Promise<UserResponse> => {
+  const login = useCallback(async (request: LoginRequest) => {
 
-    const normalizedEmail = user.email.toLowerCase().trim()
+    const normalizedEmail = request.email.toLowerCase().trim()
     const found = users.find((u) => u.email.toLowerCase() === normalizedEmail)
     if (found) {
       setUser(found)
@@ -53,19 +53,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return mockAuthResponse(found)
     }
 
-    const response = await authService.login(user)
+    const response = await authService.login(request)
     if (!response) throw new Error("Login failed")
 
     const userData: UserResponse = await me()
 
-    const apiUser: User = {
+    setUser({
       name: userData.name ?? "No name",
       email: userData.email,
-      role: userData.role,
-    }
-    setUser(apiUser)
-
-    return apiUser
+      role: userData.role
+    })
   }, []);
 
   const logout = useCallback(async () => {

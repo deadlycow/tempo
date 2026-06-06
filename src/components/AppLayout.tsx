@@ -27,13 +27,14 @@ const leaderNav: NavItem[] = [
 
 const projectNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/project", label: "Project", icon: FolderCog }
+  { to: "/project", label: "Projects", icon: FolderCog }
 ]
 
 const adminNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/history", label: "History", icon: History },
   { to: "/register", label: "Add User", icon: UserPlus },
+  { to: "/project", label: "Projects", icon: FolderCog }
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {

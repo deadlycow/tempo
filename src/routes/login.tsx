@@ -30,7 +30,7 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(user);
+      login(user);
       toast.success("Welcome back");
       navigate({ to: "/dashboard" });
     } catch (err) {
