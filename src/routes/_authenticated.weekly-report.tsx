@@ -13,6 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
 
+import * as timeEntry from "@/services/timeEntryService"
+import type { CreateTimeEntryRequest } from "@/types/requests/TimeEntryRequest";
+
 export const Route = createFileRoute("/_authenticated/weekly-report")({
   component: WeeklyReportPage,
 });
@@ -22,12 +25,13 @@ function WeeklyReportPage() {
   const { reports, projects, upsertReport } = useData();
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
-
+  
   const existing = useMemo(
     () => reports.find((r) => r.userId === user!.id && r.weekStart === weekStart),
     [reports, user, weekStart]
   );
-
+  const isDemoUser = user?.id?.startsWith("demo")
+  
   const readOnly = !!existing && existing.status !== "draft" && existing.status !== "rejected";
 
   const [entries, setEntries] = useState<TimeEntry[]>(() =>
@@ -86,14 +90,27 @@ function WeeklyReportPage() {
   });
 
   const onSaveDraft = () => {
-    upsertReport(buildReport("draft"));
+    if (isDemoUser){
+      upsertReport(buildReport("draft"));
+    } else {
+      // send to db
+    }
     toast.success("Draft saved");
   };
+
 
   const onSubmit = () => {
     const err = validate();
     if (err) return toast.error(err);
-    upsertReport(buildReport("submitted"));
+
+    if (isDemoUser)
+    {
+      upsertReport(buildReport("submitted"));
+      console.log("Demo USER!")
+    } else {
+      // we dont have the weekly report for real users yet
+      console.log("Real USER!")
+    }
     toast.success("Report submitted for verification");
     navigate({ to: "/history" });
   };

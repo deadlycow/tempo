@@ -1,12 +1,12 @@
 import type { Project, User, WeeklyReport } from "./types";
 
 export const users: User[] = [
-  { id: "u1", name: "Anna Lindqvist", email: "anna@acme.co", role: "employee", team: "Platform" },
-  { id: "u2", name: "Erik Johansson", email: "erik@acme.co", role: "employee", team: "Platform" },
-  { id: "u3", name: "Sofia Berg", email: "sofia@acme.co", role: "employee", team: "Platform" },
-  { id: "u4", name: "Marcus Nyström", email: "marcus@acme.co", role: "employee", team: "Platform" },
-  { id: "u5", name: "Karin Holm", email: "karin@acme.co", role: "team_leader", team: "Platform" },
-  { id: "u6", name: "Oliver Admin", email: "admin@acme.co", role: "admin", team: "Operations" },
+  { id: "demo-u1", name: "Anna Lindqvist", email: "anna@acme.co", role: "employee", team: "Platform" },
+  { id: "demo-u2", name: "Erik Johansson", email: "erik@acme.co", role: "employee", team: "Platform" },
+  { id: "demo-u3", name: "Sofia Berg", email: "sofia@acme.co", role: "employee", team: "Platform" },
+  { id: "demo-u4", name: "Marcus Nyström", email: "marcus@acme.co", role: "employee", team: "Platform" },
+  { id: "demo-u5", name: "Karin Holm", email: "karin@acme.co", role: "team_leader", team: "Platform" },
+  { id: "demo-u6", name: "Oliver Admin", email: "admin@acme.co", role: "admin", team: "Operations" },
 ];
 
 export const projects: Project[] = [
