@@ -2,7 +2,7 @@ interface CreateProjectRequest {
   name: string,
   description?: string,
   startDate: Date,
-  endDate: Date,
+  endDate?: Date,
 }
 interface GetProjectRequest {
   id: string,
