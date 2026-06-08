@@ -1,15 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { users } from "./mock-data";
 import type { User } from "./types";
-import { LoginRequest } from "@/types/requests/AuthRequst";
-import { logIn } from "@/services/authService";
+
+import { LoginRequest } from "@/types/requests/AuthRequest";
+import * as authService from "@/services/authService";
 import { UserResponse } from "@/types/responses/UserResponse";
-import { me } from "@/services/userService";
+import { me } from "@/services/userService"
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  login: (user: LoginRequest) => Promise<UserResponse>;
+  login: (user: LoginRequest) => void;
   logout: () => void;
 }
 
@@ -36,39 +37,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const mockAuthResponse = (found: User): UserResponse => {
     const role = "role" in found && typeof found.role === "string" ? found.role : "employee"
     return {
-      userId: found.id,
       email: found.email,
-      userName: found.name,
-      role,
+      name: found.name,
+      role: role,
     }
   }
 
-  const login = useCallback(async (user: LoginRequest): Promise<UserResponse> => {
-    const normalizedEmail = user.email.toLowerCase().trim()
+  const login = useCallback(async (request: LoginRequest) => {
+
+    const normalizedEmail = request.email.toLowerCase().trim()
     const found = users.find((u) => u.email.toLowerCase() === normalizedEmail)
     if (found) {
       setUser(found)
+      console.log("Using mock auth response for", found.role)
       return mockAuthResponse(found)
     }
 
-    const response = await logIn(user)
+    const response = await authService.login(request)
     if (!response) throw new Error("Login failed")
 
     const userData: UserResponse = await me()
 
-    const apiUser: User = {
-      id: userData.userId,
-      name: userData.userName ?? "No name",
+    setUser({
+      name: userData.name ?? "No name",
       email: userData.email,
-      // role: userData.role,
-    }
-
-    setUser(apiUser)
-
-    return apiUser
+      role: userData.role
+    })
   }, []);
 
-  const logout = useCallback(() => setUser(null), []);
+  const logout = useCallback(async () => {
+    await authService.logout()
+    setUser(null)
+  }, []);
 
   const value = useMemo<AuthState>(
     () => ({ user, isAuthenticated: !!user, login, logout }),

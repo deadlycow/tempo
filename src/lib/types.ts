@@ -1,4 +1,4 @@
-export type Role = "employee" | "team_leader";
+export type Role = "employee" | "team_leader" | "admin" | "project_manager";
 
 export type ReportStatus = "draft" | "submitted" | "verified" | "rejected" | "sent";
 
@@ -6,7 +6,7 @@ export interface User {
   id?: string;
   name: string;
   email: string;
-  // role: Role;
+  role: Role;
   avatar?: string;
   team?: string;
 }
