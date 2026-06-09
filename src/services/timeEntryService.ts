@@ -1,8 +1,8 @@
-import { CreateTimeEntryRequest } from "@/types/requests/TimeEntryRequest"
+import { TimeEntryRequest } from "@/types/requests/TimeEntryRequest"
 
 const baseUrl = 'http://localhost:5078/'
 
-const create = async (request: CreateTimeEntryRequest[]) => {
+const create = async (request: TimeEntryRequest[]) => {
     const response = await fetch(`${baseUrl}api/timeentry`, {
         method: 'POST',
         credentials: 'include',

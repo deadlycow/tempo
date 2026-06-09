@@ -28,7 +28,7 @@ export interface TimeEntry {
 
 export interface WeeklyReport {
   id: string;
-  userId: string;
+  userId?: string;
   weekStart: string; // ISO yyyy-mm-dd (Monday)
   entries: TimeEntry[];
   status: ReportStatus;

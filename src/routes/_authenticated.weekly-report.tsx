@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
 
 import * as timeEntry from "@/services/timeEntryService"
-import type { CreateTimeEntryRequest } from "@/types/requests/TimeEntryRequest";
+// import type { TimeEntryRequest } from "@/types/requests/TimeEntryRequest";
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
   component: WeeklyReportPage,
