@@ -18,7 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getReport } from "@/services/reportService";
 import { getAllProjects } from "@/services/projectService";
 import { ReportResponse } from "@/types/responses/ReportResponse";
-import type { GetReportRequest } from "@/types/requests/ReportRequest";
+import { GetReportRequest } from "@/types/requests/ReportRequest";
 // import type { TimeEntryRequest } from "@/types/requests/TimeEntryRequest";
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
@@ -32,23 +32,24 @@ function WeeklyReportPage() {
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
 
-  console.log("Frontend",weekStart)
-  
   const existing = useMemo(
     () => reports.find((r) => r.userId === user!.id && r.weekStart === weekStart),
     [reports, user, weekStart]
   );
-  const { data: report } = useQuery({
-    queryKey: ['report'],
-    queryFn: ()=> getReport(new GetReportRequest)
+
+
+  const { data: report, error } = useQuery({
+    queryKey: ['report', weekStart],
+    queryFn: () => getReport({
+      date: new Date(weekStart)
+    })
   })
 
   // const {data: projects} = useQuery({
   //   queryKey: ['projects'],
   //   queryFn: getAllProjects
   // })
-
-  console.log("Response", report)
+ 
   // const isDemoUser = user?.id?.startsWith("demo")
 
   const readOnly = !!existing && existing.status !== "draft" && existing.status !== "rejected";

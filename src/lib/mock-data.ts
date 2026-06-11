@@ -11,12 +11,7 @@ function mondayOf(d: Date): Date {
 }
 
 // export function isoDate(d: Date): string {
-//   const year = d.getFullYear()
-//   const month = String(d.getMonth() + 1).padStart(2, "0")
-//   const day = String(d.getDay()).padStart(2, "0")
-//   return `${year}-${month}-${day}`
-  // return d.toISOString().split("T")[0];
-  // return d.toISOString().slice(0, 10);
+// return d.toISOString().slice(0, 10);
 // }
 
 export function isoDate(d: Date): string {
@@ -34,7 +29,6 @@ export function addDays(d: Date | string, n: number): Date {
 }
 
 export function getWeekStart(d: Date = new Date()): string {
-  console.log("function getWeekStart: ",isoDate(mondayOf(d)))
   return isoDate(mondayOf(d));
 }
 

@@ -1,25 +1,27 @@
 import { GetReportRequest } from "@/types/requests/ReportRequest"
 import { ReportResponse } from "@/types/responses/ReportResponse"
 
-const baseUrl = 'http://localhost:5078/'
+const baseUrl = "http://localhost:5078/"
 
 // const getReports = async () => {
 //     const response = await fetch(`${baseUrl}/api/reports`)
 // }
 
-const getReport = async (data: GetReportRequest) : Promise<ReportResponse> => {
+const getReport = async (data: GetReportRequest): Promise<ReportResponse> => {
     const response = await fetch(`${baseUrl}api/report`, {
-        method: 'GET',
+        method: 'POST',
         credentials: 'include',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+            date: data.date.toISOString().split('T')[0]
         })
+    })
     if (!response.ok)
         throw new Error('No report found')
 
-    return await response.json()
+    return response.json()
 }
 export {
     // getReports,
