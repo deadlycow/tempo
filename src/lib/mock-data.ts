@@ -1,7 +1,5 @@
 import type { Project, User, WeeklyReport } from "./types";
 
-
-
 // Helpers to generate weeks (Monday)
 function mondayOf(d: Date): Date {
   const date = new Date(d);
@@ -12,8 +10,21 @@ function mondayOf(d: Date): Date {
   return date;
 }
 
+// export function isoDate(d: Date): string {
+//   const year = d.getFullYear()
+//   const month = String(d.getMonth() + 1).padStart(2, "0")
+//   const day = String(d.getDay()).padStart(2, "0")
+//   return `${year}-${month}-${day}`
+  // return d.toISOString().split("T")[0];
+  // return d.toISOString().slice(0, 10);
+// }
+
 export function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+const date = new Date(d)
+const y = date.getFullYear()
+const m = String(date.getMonth() + 1).padStart(2, "0")
+const day = String(date.getDate()).padStart(2, "0")
+return `${y}-${m}-${day}`
 }
 
 export function addDays(d: Date | string, n: number): Date {
@@ -23,6 +34,7 @@ export function addDays(d: Date | string, n: number): Date {
 }
 
 export function getWeekStart(d: Date = new Date()): string {
+  console.log("function getWeekStart: ",isoDate(mondayOf(d)))
   return isoDate(mondayOf(d));
 }
 

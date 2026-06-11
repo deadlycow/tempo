@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ReportDetailsDialog } from "@/components/ReportDetailsDialog";
+import { useQuery } from "@tanstack/react-query";
+import { getReports } from "@/services/reportService";
 
 export const Route = createFileRoute("/_authenticated/history")({
   component: HistoryPage,
@@ -17,15 +19,21 @@ export const Route = createFileRoute("/_authenticated/history")({
 
 function HistoryPage() {
   const { user } = useAuth();
-  const { reports, projects, users, getUserById, getProjectById } = useData();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [userFilter, setUserFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-
+  
+  const { reports, projects, users, getUserById, getProjectById } = useData();
+  
   const isLeader = user!.role === "team_leader";
   const employees = users.filter((u) => u.role === "employee" && u.team === user!.team);
+
+  // const {data: reports} = useQuery({
+  //   queryKey: ['getReports'],
+  //   queryFn: getReports
+  // })
 
   const list = useMemo(() => {
     let l = reports;

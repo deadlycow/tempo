@@ -14,6 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
 
 import * as timeEntry from "@/services/timeEntryService"
+import { useQuery } from "@tanstack/react-query";
+import { getReport } from "@/services/reportService";
+import { getAllProjects } from "@/services/projectService";
+import { ReportResponse } from "@/types/responses/ReportResponse";
+import type { GetReportRequest } from "@/types/requests/ReportRequest";
 // import type { TimeEntryRequest } from "@/types/requests/TimeEntryRequest";
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
@@ -23,15 +28,29 @@ export const Route = createFileRoute("/_authenticated/weekly-report")({
 function WeeklyReportPage() {
   const { user } = useAuth();
   const { reports, projects, upsertReport } = useData();
+
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
+
+  console.log("Frontend",weekStart)
   
   const existing = useMemo(
     () => reports.find((r) => r.userId === user!.id && r.weekStart === weekStart),
     [reports, user, weekStart]
   );
-  const isDemoUser = user?.id?.startsWith("demo")
-  
+  const { data: report } = useQuery({
+    queryKey: ['report'],
+    queryFn: ()=> getReport(new GetReportRequest)
+  })
+
+  // const {data: projects} = useQuery({
+  //   queryKey: ['projects'],
+  //   queryFn: getAllProjects
+  // })
+
+  console.log("Response", report)
+  // const isDemoUser = user?.id?.startsWith("demo")
+
   const readOnly = !!existing && existing.status !== "draft" && existing.status !== "rejected";
 
   const [entries, setEntries] = useState<TimeEntry[]>(() =>
@@ -90,11 +109,8 @@ function WeeklyReportPage() {
   });
 
   const onSaveDraft = () => {
-    if (isDemoUser){
-      upsertReport(buildReport("draft"));
-    } else {
-      // send to db
-    }
+    upsertReport(buildReport("draft"));
+    // send to db
     toast.success("Draft saved");
   };
 
@@ -103,14 +119,8 @@ function WeeklyReportPage() {
     const err = validate();
     if (err) return toast.error(err);
 
-    if (isDemoUser)
-    {
-      upsertReport(buildReport("submitted"));
-      console.log("Demo USER!")
-    } else {
-      // we dont have the weekly report for real users yet
-      console.log("Real USER!")
-    }
+    upsertReport(buildReport("submitted"));
+    // we dont have the weekly report for real users yet
     toast.success("Report submitted for verification");
     navigate({ to: "/history" });
   };
