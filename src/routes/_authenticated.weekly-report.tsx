@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Save, Send, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -17,8 +17,6 @@ import * as timeEntry from "@/services/timeEntryService"
 import { useQuery } from "@tanstack/react-query";
 import { getReport } from "@/services/reportService";
 import { getAllProjects } from "@/services/projectService";
-import { ReportResponse } from "@/types/responses/ReportResponse";
-import { GetReportRequest } from "@/types/requests/ReportRequest";
 // import type { TimeEntryRequest } from "@/types/requests/TimeEntryRequest";
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
@@ -32,37 +30,47 @@ function WeeklyReportPage() {
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
 
-  const existing = useMemo(
-    () => reports.find((r) => r.userId === user!.id && r.weekStart === weekStart),
-    [reports, user, weekStart]
-  );
+  // const existing = useMemo(
+  //   () => reports.find((r) => r.userId === user!.id && r.weekStart === weekStart),
+  //   [reports, user, weekStart]
+  // );
 
 
-  const { data: report, error } = useQuery({
+  const { data: report } = useQuery({
     queryKey: ['report', weekStart],
     queryFn: () => getReport({
       date: new Date(weekStart)
     })
   })
 
+  const existing = report
+  console.log(existing)
+
   // const {data: projects} = useQuery({
   //   queryKey: ['projects'],
   //   queryFn: getAllProjects
   // })
- 
+
   // const isDemoUser = user?.id?.startsWith("demo")
 
   const readOnly = !!existing && existing.status !== "draft" && existing.status !== "rejected";
 
-  const [entries, setEntries] = useState<TimeEntry[]>(() =>
-    existing?.entries ?? [{
-      id: crypto.randomUUID(),
-      projectId: projects[0]?.id ?? "",
-      date: weekStart,
-      hours: 8,
-      description: "",
-    }]
-  );
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
+
+  useEffect(() => {
+    setEntries(
+      existing?.timeEntries?.length ?
+        existing?.timeEntries : [{
+          id: crypto.randomUUID(),
+          projectId: projects[0]?.id ?? "",
+          date: weekStart,
+          hoursWorked: 8,
+          description: "",
+        }]
+    )
+  }, [report]) // Change ReportResponse(TimeEntry name of hoursWorked to hours)
+
+  console.log(entries)
 
   // Reset when week changes
   const onChangeWeek = (delta: number) => {
@@ -72,7 +80,7 @@ function WeeklyReportPage() {
     if (found) {
       setEntries(found.entries);
     } else {
-      setEntries([{ id: crypto.randomUUID(), projectId: projects[0]?.id ?? "", date: next, hours: 8, description: "" }]);
+      setEntries([{ id: crypto.randomUUID(), projectId: projects[0]?.id ?? "", date: next, hoursWorked: 8, description: "" }]);
     }
   };
 
@@ -83,7 +91,7 @@ function WeeklyReportPage() {
   const addEntry = () => {
     setEntries((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), projectId: projects[0]?.id ?? "", date: weekStart, hours: 0, description: "" },
+      { id: crypto.randomUUID(), projectId: projects[0]?.id ?? "", date: weekStart, hoursWorked: 0, description: "" },
     ]);
   };
 
@@ -93,8 +101,8 @@ function WeeklyReportPage() {
     if (entries.length === 0) return "Add at least one time entry.";
     for (const e of entries) {
       if (!e.projectId) return "Every entry needs a project.";
-      if (!e.hours || e.hours <= 0) return "Hours must be greater than zero.";
-      if (e.hours > 24) return "Hours per entry cannot exceed 24.";
+      if (!e.hoursWorked || e.hoursWorked <= 0) return "Hours must be greater than zero.";
+      if (e.hoursWorked > 24) return "Hours per entry cannot exceed 24.";
       if (!e.description.trim()) return "Add a short description for each entry.";
     }
     return null;
@@ -106,7 +114,7 @@ function WeeklyReportPage() {
     weekStart,
     entries,
     status,
-    submittedAt: status === "submitted" ? new Date().toISOString() : existing?.submittedAt,
+    submittedAt: status === "submitted" ? new Date().toISOString() : existing?.submittedAd,
   });
 
   const onSaveDraft = () => {
@@ -136,7 +144,7 @@ function WeeklyReportPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Weekly time report</h1>
           <p className="mt-1 text-sm text-muted-foreground">Log hours for the selected week.</p>
         </div>
-        {existing && <StatusBadge status={existing.status} />}
+        {/* {existing && <StatusBadge status={existing.status} />} */}
       </div>
 
       {readOnly && (
@@ -144,17 +152,17 @@ function WeeklyReportPage() {
           <AlertCircle className="mt-0.5 h-4 w-4" />
           <div>
             This report has already been {existing!.status} and is read-only.
-            {existing?.feedback && <p className="mt-1 text-foreground/80">Feedback: {existing.feedback}</p>}
+            {existing?.feedBack && <p className="mt-1 text-foreground/80">Feedback: {existing.feedBack}</p>}
           </div>
         </div>
       )}
 
-      {existing?.status === "rejected" && existing.feedback && (
+      {existing?.status === "rejected" && existing.feedBack && (
         <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm">
           <AlertCircle className="mt-0.5 h-4 w-4 text-destructive" />
           <div>
             <p className="font-medium text-destructive">Rejected by team leader</p>
-            <p className="mt-1 text-foreground/80">{existing.feedback}</p>
+            <p className="mt-1 text-foreground/80">{existing.feedBack}</p>
           </div>
         </div>
       )}
@@ -185,7 +193,7 @@ function WeeklyReportPage() {
         {/* Day chips */}
         <div className="grid grid-cols-7 border-b text-center text-xs">
           {days.map((d) => {
-            const dayHours = entries.filter((e) => e.date === d).reduce((s, e) => s + (e.hours || 0), 0);
+            const dayHours = entries.filter((e) => e.date === d).reduce((s, e) => s + (e.hoursWorked || 0), 0);
             return (
               <div key={d} className="border-r px-2 py-3 last:border-r-0">
                 <p className="text-muted-foreground">{dayLabel(d)}</p>
@@ -240,8 +248,8 @@ function WeeklyReportPage() {
                   min={0}
                   max={24}
                   step={0.25}
-                  value={entry.hours}
-                  onChange={(e) => updateEntry(entry.id, { hours: parseFloat(e.target.value) || 0 })}
+                  value={entry.hoursWorked}
+                  onChange={(e) => updateEntry(entry.id, { hoursWorked: parseFloat(e.target.value) || 0 })}
                   disabled={readOnly}
                 />
               </div>

@@ -22,7 +22,7 @@ export interface TimeEntry {
   id: string;
   projectId: string;
   date: string; // ISO yyyy-mm-dd
-  hours: number;
+  hoursWorked: number;
   description: string;
 }
 
