@@ -1,4 +1,4 @@
-import type { TimeEntry } from "./types";
+import type { TimeEntry } from "@/types/timeEntries";
 import { addDays } from "./mock-data";
 
 export function totalHours(entries: TimeEntry[]): number {

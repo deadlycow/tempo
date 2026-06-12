@@ -1,15 +1,14 @@
-import { TimeEntry } from "./TimeEntryRequest"
+import { Status } from "@/Enum/Status"
+import { TimeEntry } from "@/types/timeEntries"
 
-type Status = "draft" | "submitted" | "verified" | "rejected" | "sent"
-
-interface Get {
+interface GetReportRequest {
   date: Date,
 }
-interface Upsert {
+interface Report {
   id?: string
   userId?: string
   weekStart: string // ISO yyyy-mm-dd (Monday)
-  entries: TimeEntry[]
+  timeEntries: TimeEntry[]
   status: Status
   submittedAt?: string
   verifiedAt?: string
@@ -19,6 +18,6 @@ interface Upsert {
   reviewedBy?: string
 }
 export {
-  Get,
-  Upsert
+  GetReportRequest,
+  Report,
 }

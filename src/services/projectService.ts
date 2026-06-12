@@ -1,5 +1,6 @@
 import type { CreateProjectRequest, GetProjectRequest } from "@/types/requests/ProjectRequest"
-import type { ProjectResponse } from "@/types/responses/ProjectResponse"
+import { ProjectResponse } from "@/types/responses/ProjectResponse"
+
 const baseUrl = 'http://localhost:5078/'
 
 const createProject = async (data: CreateProjectRequest) => {
@@ -13,7 +14,7 @@ const createProject = async (data: CreateProjectRequest) => {
   })
   return response.json()
 }
-const getProject = async (data: GetProjectRequest) => {
+const getProject = async (data: GetProjectRequest): Promise<ProjectResponse | null> => {
   const response = await fetch(`${baseUrl}api/project`, {
     method: 'POST',
     credentials: 'include',
@@ -22,6 +23,9 @@ const getProject = async (data: GetProjectRequest) => {
     },
     body: JSON.stringify(data)
   })
+  if (response.status === 404)
+    return null
+
   return response.json()
 }
 
@@ -33,8 +37,8 @@ const getAllProjects = async (): Promise<ProjectResponse[]> => {
       'Content-Type': 'application/json'
     }
   })
-  if (!response.ok)
-    throw new Error("Failed to fetch projects")
+  if (response.status === 404)
+    return []
 
   return await response.json()
 }

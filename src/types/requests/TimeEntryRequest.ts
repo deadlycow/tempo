@@ -1,9 +1,9 @@
 type ReportStatus = "draft" | "submitted" | "verified" | "rejected" | "sent";
 
-interface TimeEntryRequest {
-  // id: string,
+interface TimeEntry {
+  id?: string,
+  employeeId?: string,
   projectId: string,
-  // employeeId: string,
   hoursWorked: number,
   date: string,
   description?: string,
@@ -13,7 +13,7 @@ interface WeeklyReport {
   id: string;
   userId: string;
   weekStart: string; // ISO yyyy-mm-dd (Monday)
-  entries: TimeEntryRequest[];
+  entries: TimeEntry[];
   status: ReportStatus;
   submittedAt?: string;
   verifiedAt?: string;
@@ -41,7 +41,7 @@ interface GetAllTimeEntryByUserIdRequest {
   id: string
 }
 export {
-  TimeEntryRequest,
+  TimeEntry,
   WeeklyReport,
   GetTimeEntryRequest,
   UpdateTimeEntryRequest,

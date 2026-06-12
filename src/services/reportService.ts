@@ -1,9 +1,9 @@
-import { GetReportRequest } from "@/types/requests/ReportRequest"
-import { ReportResponse } from "@/types/responses/ReportResponse"
+import { GetReportRequest, Report } from "@/types/reports"
+// import { ReportResponse } from "@/types/responses/ReportResponse"
 
 const baseUrl = "http://localhost:5078/"
 
-const getReport = async (data: GetReportRequest): Promise<ReportResponse> => {
+const getReport = async (data: GetReportRequest): Promise<Report | null> => {
     const response = await fetch(`${baseUrl}api/report`, {
         method: 'POST',
         credentials: 'include',
@@ -14,11 +14,15 @@ const getReport = async (data: GetReportRequest): Promise<ReportResponse> => {
             date: data.date.toISOString().split('T')[0]
         })
     })
-    if (!response.ok)
-        throw new Error('No report found')
+    if (response.status === 404)
+        return null
 
     return response.json()
 }
+const saveReport = async (data: Report) => {
+    console.log(data)
+}
 export {
-    getReport
+    getReport,
+    saveReport
 }

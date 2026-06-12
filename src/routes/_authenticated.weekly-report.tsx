@@ -6,20 +6,22 @@ import { useAuth } from "@/lib/auth";
 import { useData } from "@/lib/data-store";
 import { addDays, getWeekStart, isoDate } from "@/lib/mock-data";
 import { dayLabel, formatShortDate, formatWeekRange, totalHours } from "@/lib/format";
-import type { TimeEntry, WeeklyReport } from "@/lib/types";
+import type { WeeklyReport } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
 
-import * as timeEntry from "@/services/timeEntryService"
 import { useQuery } from "@tanstack/react-query";
 import { getReport } from "@/services/reportService";
 import { getAllProjects } from "@/services/projectService";
-import * as timeEntryService from"@/services/timeEntryService"
-import { TimeEntryRequest } from "@/types/requests/TimeEntryRequest";
-// import type { TimeEntryRequest } from "@/types/requests/TimeEntryRequest";
+import { TimeEntry } from "@/types/timeEntries";
+import { Report } from "@/types/reports";
+import { Status } from "@/Enum/Status";
+
+import * as reportService from "@/services/reportService"
+// import * as timeEntryService from "@/services/timeEntryService"
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
   component: WeeklyReportPage,
@@ -27,107 +29,154 @@ export const Route = createFileRoute("/_authenticated/weekly-report")({
 
 function WeeklyReportPage() {
   const { user } = useAuth();
-  const { reports, upsertReport } = useData();
-// projects,
+  // const { reports, upsertReport } = useData();
+  // projects,
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
+
+  const [report, setReport] = useState<Report>()
 
   // const existing = useMemo(
   //   () => reports.find((r) => r.userId === user!.id && r.weekStart === weekStart),
   //   [reports, user, weekStart]
   // );
 
-
-  const { data: report } = useQuery({
+  const { data } = useQuery({
     queryKey: ['report', weekStart],
     queryFn: () => getReport({
       date: new Date(weekStart)
     })
   })
 
-  const existing = report
+  const existing = data
 
-  const {data: projects = []} = useQuery({
+  const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
     queryFn: getAllProjects
   })
 
   // const isDemoUser = user?.id?.startsWith("demo")
 
-  const readOnly = !!existing && existing.status !== "draft" && existing.status !== "rejected";
+  const readOnly = !!existing && existing.status !== Status.draft && existing.status !== Status.rejected;
 
   const [entries, setEntries] = useState<TimeEntry[]>([]);
 
   useEffect(() => {
-    setEntries(
-      existing?.timeEntries?.length ?
-        existing?.timeEntries : [{
-          id: crypto.randomUUID(),
-          projectId: projects[0]?.id ?? "",
-          date: weekStart,
-          hoursWorked: 8,
-          description: "",
-        }]
-    )
-  }, [report]) // Change ReportResponse(TimeEntry name of hoursWorked to hours)
+    if (data)
+      setReport(data)
+    else {
+      setReport({
+        id: "",
+        status: Status.draft,
+        weekStart,
+        timeEntries: []
+      })
+    }
+    // setEntries(
+    //   existing?.timeEntries?.length ?
+    //     existing?.timeEntries : [{
+    //       id: crypto.randomUUID(),
+    //       projectId: projects[0]?.id ?? "",
+    //       date: weekStart,
+    //       hoursWorked: 8,
+    //       description: "",
+    //     }]
+    // )
+  }, [data, weekStart]) // Change ReportResponse(TimeEntry name of hoursWorked to hours)
 
   // Reset when week changes
   const onChangeWeek = (delta: number) => {
     const next = isoDate(addDays(weekStart, delta * 7));
     setWeekStart(next);
-    const found = reports.find((r) => r.userId === user!.id && r.weekStart === next);
-    if (found) {
-      setEntries(found.entries);
-    } else {
-      setEntries([{ id: crypto.randomUUID(), projectId: projects[0]?.id ?? "", date: next, hoursWorked: 8, description: "" }]);
-    }
   };
 
   const updateEntry = (id: string, patch: Partial<TimeEntry>) => {
-    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
-  };
+    setReport((prev) => {
+      if (!prev) return prev
+
+      return {
+        ...prev,
+        timeEntries: prev.timeEntries.map((e) => (e.id === id ? { ...e, ...patch } : e))
+      }
+    });
+  }
+
 
   const addEntry = () => {
-    setEntries((prev) => [
-      ...prev,
-      { id: "", projectId: "", date: weekStart, hoursWorked: 0, description: "" },
-    ]);
+    setReport((prev) => {
+      if (!prev) return prev
+
+      return {
+        ...prev,
+        timeEntries: [
+          ...prev.timeEntries,
+          {
+            id: "",
+            projectId: "",
+            date: weekStart,
+            hoursWorked: 0,
+            description: ""
+          }
+        ]
+      }
+    }
+
+      //    [
+      //   ...prev,
+      //   { id: "", projectId: "", date: weekStart, hoursWorked: 0, description: "", reportId: "" },
+      // ]
+    );
   };
 
-  const removeEntry = (id: string) => setEntries((prev) => prev.filter((e) => e.id !== id));
+  const removeEntry = (id: string) => {
+    setReport(prev => {
+      if (!prev) return prev
+
+      return {
+        ...prev,
+        timeEntries: prev.timeEntries.filter(e => e.id !== id)
+      };
+    })
+  }
+
+
 
   const validate = (): string | null => {
-    if (entries.length === 0) return "Add at least one time entry.";
-    for (const e of entries) {
+    if (!report?.timeEntries) return "empty"
+    if (report?.timeEntries.length === 0) return "Add at least one time entry.";
+    for (const e of report?.timeEntries) {
       if (!e.projectId) return "Every entry needs a project.";
       if (!e.hoursWorked || e.hoursWorked <= 0) return "Hours must be greater than zero.";
       if (e.hoursWorked > 24) return "Hours per entry cannot exceed 24.";
-      if (!e.description.trim()) return "Add a short description for each entry.";
     }
     return null;
   };
 
-  const buildReport = (status: WeeklyReport["status"]): WeeklyReport => ({
-    id: existing?.id ?? "",
-    userId: user!.id,
-    weekStart,
-    entries,
-    status,
-    submittedAt: status === "submitted" ? new Date().toISOString() : existing?.submittedAd,
-  });
+  // const buildReport = (status: WeeklyReport["status"]): WeeklyReport => ({
+  //   id: existing?.id ?? "",
+  //   userId: user!.id,
+  //   weekStart,
+  //   entries,
+  //   status,
+  //   submittedAt: status === "submitted" ? new Date().toISOString() : existing?.submittedAd,
+  // });
 
-  const onSaveDraft = () => {
-    const payload: TimeEntryRequest[] = entries.map((e) => ({
-      projectId: e.projectId,
-      hoursWorked: e.hoursWorked,
-      date: new Date(e.date).toISOString().split('T')[0],
-      description: e.description || "",
-      reportId: report?.id || ""
-    }))
+  const onSaveDraft = async () => {
+    if (!report) return
+    const payload = {
+      weekStart,
+      timeEntries: report.timeEntries
+    }
+    // const payload: TimeEntryRequest[] = entries.map((e) => ({
+    //   projectId: e.projectId,
+    //   hoursWorked: e.hoursWorked,
+    //   date: new Date(e.date).toISOString().split('T')[0],
+    //   description: e.description || "",
+    //   reportId: report?.id || ""
+    // }))
     // upsertReport(buildReport("draft"));
     console.log(payload)
-    var result = timeEntryService.create(payload)
-    // send to db
+    // var result = reportService.saveReport(payload)
     toast.success("Draft saved");
   };
 
@@ -136,13 +185,13 @@ function WeeklyReportPage() {
     const err = validate();
     if (err) return toast.error(err);
 
-    upsertReport(buildReport("submitted"));
+    // upsertReport(buildReport("submitted"));
     // we dont have the weekly report for real users yet
     toast.success("Report submitted for verification");
     navigate({ to: "/history" });
   };
 
-  const total = totalHours(entries);
+  const total = totalHours(report?.timeEntries ?? []);
   const days = Array.from({ length: 7 }, (_, i) => isoDate(addDays(weekStart, i)));
 
   return (
@@ -160,17 +209,17 @@ function WeeklyReportPage() {
           <AlertCircle className="mt-0.5 h-4 w-4" />
           <div>
             This report has already been {existing!.status} and is read-only.
-            {existing?.feedBack && <p className="mt-1 text-foreground/80">Feedback: {existing.feedBack}</p>}
+            {existing?.feedback && <p className="mt-1 text-foreground/80">Feedback: {existing.feedback}</p>}
           </div>
         </div>
       )}
 
-      {existing?.status === "rejected" && existing.feedBack && (
+      {existing?.status === Status.rejected && existing.feedback && (
         <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm">
           <AlertCircle className="mt-0.5 h-4 w-4 text-destructive" />
           <div>
             <p className="font-medium text-destructive">Rejected by team leader</p>
-            <p className="mt-1 text-foreground/80">{existing.feedBack}</p>
+            <p className="mt-1 text-foreground/80">{existing.feedback}</p>
           </div>
         </div>
       )}
@@ -213,7 +262,7 @@ function WeeklyReportPage() {
         </div>
 
         <div className="divide-y">
-          {entries.map((entry, idx) => (
+          {report?.timeEntries.map((entry, idx) => (
             <div key={entry.id} className="grid gap-3 p-4 md:grid-cols-12 md:items-start md:gap-4">
               <div className="md:col-span-3">
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">Project</label>
