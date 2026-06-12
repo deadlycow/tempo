@@ -2,7 +2,7 @@ import type { TimeEntry } from "./types";
 import { addDays } from "./mock-data";
 
 export function totalHours(entries: TimeEntry[]): number {
-  return Math.round(entries.reduce((s, e) => s + (Number(e.hours) || 0), 0) * 100) / 100;
+  return Math.round(entries.reduce((s, e) => s + (Number(e.hoursWorked) || 0), 0) * 100) / 100;
 }
 
 export function formatDate(d: string | Date): string {

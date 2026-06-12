@@ -17,6 +17,8 @@ import * as timeEntry from "@/services/timeEntryService"
 import { useQuery } from "@tanstack/react-query";
 import { getReport } from "@/services/reportService";
 import { getAllProjects } from "@/services/projectService";
+import * as timeEntryService from"@/services/timeEntryService"
+import { TimeEntryRequest } from "@/types/requests/TimeEntryRequest";
 // import type { TimeEntryRequest } from "@/types/requests/TimeEntryRequest";
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
@@ -25,8 +27,8 @@ export const Route = createFileRoute("/_authenticated/weekly-report")({
 
 function WeeklyReportPage() {
   const { user } = useAuth();
-  const { reports, projects, upsertReport } = useData();
-
+  const { reports, upsertReport } = useData();
+// projects,
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
 
@@ -44,12 +46,11 @@ function WeeklyReportPage() {
   })
 
   const existing = report
-  console.log(existing)
 
-  // const {data: projects} = useQuery({
-  //   queryKey: ['projects'],
-  //   queryFn: getAllProjects
-  // })
+  const {data: projects = []} = useQuery({
+    queryKey: ['projects'],
+    queryFn: getAllProjects
+  })
 
   // const isDemoUser = user?.id?.startsWith("demo")
 
@@ -70,8 +71,6 @@ function WeeklyReportPage() {
     )
   }, [report]) // Change ReportResponse(TimeEntry name of hoursWorked to hours)
 
-  console.log(entries)
-
   // Reset when week changes
   const onChangeWeek = (delta: number) => {
     const next = isoDate(addDays(weekStart, delta * 7));
@@ -91,7 +90,7 @@ function WeeklyReportPage() {
   const addEntry = () => {
     setEntries((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), projectId: projects[0]?.id ?? "", date: weekStart, hoursWorked: 0, description: "" },
+      { id: "", projectId: "", date: weekStart, hoursWorked: 0, description: "" },
     ]);
   };
 
@@ -109,7 +108,7 @@ function WeeklyReportPage() {
   };
 
   const buildReport = (status: WeeklyReport["status"]): WeeklyReport => ({
-    id: existing?.id ?? crypto.randomUUID(),
+    id: existing?.id ?? "",
     userId: user!.id,
     weekStart,
     entries,
@@ -118,7 +117,16 @@ function WeeklyReportPage() {
   });
 
   const onSaveDraft = () => {
-    upsertReport(buildReport("draft"));
+    const payload: TimeEntryRequest[] = entries.map((e) => ({
+      projectId: e.projectId,
+      hoursWorked: e.hoursWorked,
+      date: new Date(e.date).toISOString().split('T')[0],
+      description: e.description || "",
+      reportId: report?.id || ""
+    }))
+    // upsertReport(buildReport("draft"));
+    console.log(payload)
+    var result = timeEntryService.create(payload)
     // send to db
     toast.success("Draft saved");
   };

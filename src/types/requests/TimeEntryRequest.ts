@@ -1,12 +1,13 @@
 type ReportStatus = "draft" | "submitted" | "verified" | "rejected" | "sent";
 
 interface TimeEntryRequest {
-  id: string,
+  // id: string,
   projectId: string,
-  employeeId: string,
+  // employeeId: string,
   hoursWorked: number,
-  date: Date,
-  description?: string
+  date: string,
+  description?: string,
+  reportId?: string
 }
 interface WeeklyReport {
   id: string;

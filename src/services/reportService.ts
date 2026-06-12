@@ -3,10 +3,6 @@ import { ReportResponse } from "@/types/responses/ReportResponse"
 
 const baseUrl = "http://localhost:5078/"
 
-// const getReports = async () => {
-//     const response = await fetch(`${baseUrl}/api/reports`)
-// }
-
 const getReport = async (data: GetReportRequest): Promise<ReportResponse> => {
     const response = await fetch(`${baseUrl}api/report`, {
         method: 'POST',
@@ -24,6 +20,5 @@ const getReport = async (data: GetReportRequest): Promise<ReportResponse> => {
     return response.json()
 }
 export {
-    // getReports,
     getReport
 }

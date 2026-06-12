@@ -3,6 +3,7 @@ import { TimeEntryRequest } from "@/types/requests/TimeEntryRequest"
 const baseUrl = 'http://localhost:5078/'
 
 const create = async (request: TimeEntryRequest[]) => {
+    console.log(JSON.stringify(request, null, 2))
     const response = await fetch(`${baseUrl}api/timeentry`, {
         method: 'POST',
         credentials: 'include',
