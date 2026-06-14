@@ -111,7 +111,7 @@ function WeeklyReportPage() {
         timeEntries: [
           ...prev.timeEntries,
           {
-            id: "",
+            id: crypto.randomUUID(),//might not work 
             projectId: "",
             date: weekStart,
             hoursWorked: 0,
@@ -268,7 +268,7 @@ function WeeklyReportPage() {
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">Project</label>
                 <Select
                   value={entry.projectId}
-                  onValueChange={(v) => updateEntry(entry.id ?? "", { projectId: v })}
+                  onValueChange={(v) => updateEntry(entry.id, { projectId: v })}
                   disabled={readOnly}
                 >
                   <SelectTrigger>
