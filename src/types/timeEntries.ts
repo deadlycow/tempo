@@ -1,5 +1,5 @@
 interface TimeEntry {
-  id?: string,
+  id: string,
   employeeId?: string,
   projectId: string,
   hoursWorked: number,
