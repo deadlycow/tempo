@@ -1,7 +1,8 @@
 export enum Status {
-  draft,
-  submitted,
-  verified,
-  rejected,
-  sent
+  draft = "Draft",
+  submitted = "Submitted",
+  rejected = "Rejected",
+  sent = "Sent",
+  verified = "Verified",
+  noStatus = "No status"
 } 

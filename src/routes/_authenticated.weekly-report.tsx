@@ -1,9 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Save, Send, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { useData } from "@/lib/data-store";
 import { addDays, getWeekStart, isoDate } from "@/lib/mock-data";
 import { dayLabel, formatShortDate, formatWeekRange, totalHours } from "@/lib/format";
 import type { WeeklyReport } from "@/lib/types";
@@ -21,6 +20,7 @@ import { Report } from "@/types/reports";
 import { Status } from "@/Enum/Status";
 
 import * as reportService from "@/services/reportService"
+import { parseReportStatus } from "@/lib/utils";
 // import * as timeEntryService from "@/services/timeEntryService"
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
@@ -29,17 +29,10 @@ export const Route = createFileRoute("/_authenticated/weekly-report")({
 
 function WeeklyReportPage() {
   const { user } = useAuth();
-  // const { reports, upsertReport } = useData();
-  // projects,
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
 
   const [report, setReport] = useState<Report>()
-
-  // const existing = useMemo(
-  //   () => reports.find((r) => r.userId === user!.id && r.weekStart === weekStart),
-  //   [reports, user, weekStart]
-  // );
 
   const { data } = useQuery({
     queryKey: ['report', weekStart],
@@ -48,7 +41,7 @@ function WeeklyReportPage() {
     })
   })
 
-  const existing = data
+  const existing = report
 
   const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
@@ -63,25 +56,18 @@ function WeeklyReportPage() {
 
   useEffect(() => {
     if (data)
-      setReport(data)
+      setReport({
+        ...data,
+        status: parseReportStatus(Status.draft)
+      })
     else {
       setReport({
         id: "",
-        status: Status.draft,
+        status: parseReportStatus(Status.draft),
         weekStart,
         timeEntries: []
       })
     }
-    // setEntries(
-    //   existing?.timeEntries?.length ?
-    //     existing?.timeEntries : [{
-    //       id: crypto.randomUUID(),
-    //       projectId: projects[0]?.id ?? "",
-    //       date: weekStart,
-    //       hoursWorked: 8,
-    //       description: "",
-    //     }]
-    // )
   }, [data, weekStart]) // Change ReportResponse(TimeEntry name of hoursWorked to hours)
 
   // Reset when week changes
@@ -101,7 +87,6 @@ function WeeklyReportPage() {
     });
   }
 
-
   const addEntry = () => {
     setReport((prev) => {
       if (!prev) return prev
@@ -111,20 +96,10 @@ function WeeklyReportPage() {
         timeEntries: [
           ...prev.timeEntries,
           {
-            id: crypto.randomUUID(),//might not work 
-            projectId: "",
-            date: weekStart,
-            hoursWorked: 0,
-            description: ""
-          }
-        ]
+            id: crypto.randomUUID(), projectId: "", date: weekStart, hoursWorked: 0, description: ""
+          }]
       }
     }
-
-      //    [
-      //   ...prev,
-      //   { id: "", projectId: "", date: weekStart, hoursWorked: 0, description: "", reportId: "" },
-      // ]
     );
   };
 
@@ -138,8 +113,6 @@ function WeeklyReportPage() {
       };
     })
   }
-
-
 
   const validate = (): string | null => {
     if (!report?.timeEntries) return "empty"
@@ -164,6 +137,7 @@ function WeeklyReportPage() {
   const onSaveDraft = async () => {
     if (!report) return
     const payload = {
+      id: report.id,
       weekStart,
       timeEntries: report.timeEntries
     }
@@ -176,7 +150,7 @@ function WeeklyReportPage() {
     // }))
     // upsertReport(buildReport("draft"));
     console.log(payload)
-    // var result = reportService.saveReport(payload)
+    var result = reportService.saveReport(payload)
     toast.success("Draft saved");
   };
 
@@ -201,7 +175,7 @@ function WeeklyReportPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Weekly time report</h1>
           <p className="mt-1 text-sm text-muted-foreground">Log hours for the selected week.</p>
         </div>
-        {/* {existing && <StatusBadge status={existing.status} />} */}
+        {existing && <StatusBadge status={existing.status ?? Status.noStatus} />}
       </div>
 
       {readOnly && (
@@ -250,7 +224,7 @@ function WeeklyReportPage() {
         {/* Day chips */}
         <div className="grid grid-cols-7 border-b text-center text-xs">
           {days.map((d) => {
-            const dayHours = entries.filter((e) => e.date === d).reduce((s, e) => s + (e.hoursWorked || 0), 0);
+            const dayHours = report?.timeEntries ? report?.timeEntries.filter((e) => e.date === d).reduce((s, e) => s + (e.hoursWorked || 0), 0) : 0;
             return (
               <div key={d} className="border-r px-2 py-3 last:border-r-0">
                 <p className="text-muted-foreground">{dayLabel(d)}</p>

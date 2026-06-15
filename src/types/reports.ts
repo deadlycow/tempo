@@ -9,7 +9,7 @@ interface Report {
   userId?: string
   weekStart: string // ISO yyyy-mm-dd (Monday)
   timeEntries: TimeEntry[]
-  status: Status
+  status?: Status
   submittedAt?: string
   verifiedAt?: string
   rejectedAt?: string
