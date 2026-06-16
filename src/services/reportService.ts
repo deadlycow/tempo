@@ -20,7 +20,18 @@ const getReport = async (data: GetReportRequest): Promise<Report | null> => {
     return response.json()
 }
 const saveReport = async (data: Report) => {
-    console.log(data)
+    const response = await fetch(`${baseUrl}api/report/upsert`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    if (!response.ok)
+        return null
+
+    return response.status
 }
 export {
     getReport,

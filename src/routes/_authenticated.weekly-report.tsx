@@ -136,7 +136,7 @@ function WeeklyReportPage() {
 
   const onSaveDraft = async () => {
     if (!report) return
-    const payload = {
+    const payload : Report = {
       id: report.id,
       weekStart,
       timeEntries: report.timeEntries
@@ -151,6 +151,7 @@ function WeeklyReportPage() {
     // upsertReport(buildReport("draft"));
     console.log(payload)
     var result = reportService.saveReport(payload)
+    console.log(result)
     toast.success("Draft saved");
   };
 
