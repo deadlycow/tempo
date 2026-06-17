@@ -96,7 +96,7 @@ function WeeklyReportPage() {
         timeEntries: [
           ...prev.timeEntries,
           {
-            id: crypto.randomUUID(), projectId: "", date: weekStart, hoursWorked: 0, description: ""
+            id: "", projectId: "", date: weekStart, hoursWorked: 0, description: ""
           }]
       }
     }
