@@ -17,7 +17,20 @@ interface Report {
   feedback?: string
   reviewedBy?: string
 }
+interface ReportResponse {
+  id?: string
+  userId?: string
+  timeEntries: TimeEntry[]
+  status?: Status
+  submittedAt?: string
+  verifiedAt?: string
+  rejectedAt?: string
+  sentAt?: string
+  feedback?: string
+  reviewedBy?: string
+}
 export {
   GetReportRequest,
   Report,
+  ReportResponse
 }

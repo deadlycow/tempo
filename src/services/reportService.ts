@@ -1,5 +1,4 @@
-import { GetReportRequest, Report } from "@/types/reports"
-// import { ReportResponse } from "@/types/responses/ReportResponse"
+import { GetReportRequest, Report, ReportResponse } from "@/types/reports"
 
 const baseUrl = "http://localhost:5078/"
 
@@ -33,7 +32,25 @@ const saveReport = async (data: Report) => {
 
     return response.status
 }
+const getReports = async (): Promise<ReportResponse[]> => {
+    const response = await fetch(`${baseUrl}api/report/all/`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    if (!response.ok)
+        return []
+
+    const data = await response.json();
+
+    console.log(JSON.stringify(data, null, 2))
+
+    return data
+}
 export {
+    getReports,
     getReport,
     saveReport
 }

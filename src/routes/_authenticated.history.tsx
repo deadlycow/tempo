@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Eye, Search } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useData } from "@/lib/data-store";
@@ -24,38 +24,45 @@ function HistoryPage() {
   const [userFilter, setUserFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-  
-  const { reports, projects, users, getUserById, getProjectById } = useData();
-  
+
+  const { projects, users, getUserById, getProjectById } = useData();
+  //reports
   const isLeader = user!.role === "team_leader";
   const employees = users.filter((u) => u.role === "employee" && u.team === user!.team);
 
-  // const {data: reports} = useQuery({
-  //   queryKey: ['getReports'],
-  //   queryFn: getReports
-  // })
+  const { data: reports } = useQuery({
+    queryKey: ['getReports'],
+    queryFn: getReports
+  })
 
-  const list = useMemo(() => {
-    let l = reports;
-    if (isLeader) {
-      l = l.filter((r) => employees.some((e) => e.id === r.userId));
-    } else {
-      l = l.filter((r) => r.userId === user!.id);
-    }
-    if (statusFilter !== "all") l = l.filter((r) => r.status === statusFilter);
-    if (projectFilter !== "all") l = l.filter((r) => r.entries.some((e) => e.projectId === projectFilter));
-    if (isLeader && userFilter !== "all") l = l.filter((r) => r.userId === userFilter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      l = l.filter((r) =>
-        r.entries.some((e) => e.description.toLowerCase().includes(q)) ||
-        getUserById(r.userId)?.name.toLowerCase().includes(q)
-      );
-    }
-    return [...l].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
-  }, [reports, isLeader, employees, user, statusFilter, projectFilter, userFilter, search, getUserById]);
+  // const list = useMemo(() => {
+  //   let l = reports;
+  //   if (isLeader) {
+  //     l = l.filter((r) => employees.some((e) => e.id === r.userId));
+  //   } else {
+  //     l = l.filter((r) => r.userId === user!.id);
+  //   }
+  //   if (statusFilter !== "all") l = l.filter((r) => r.status === statusFilter);
+  //   if (projectFilter !== "all") l = l.filter((r) => r.entries.some((e) => e.projectId === projectFilter));
+  //   if (isLeader && userFilter !== "all") l = l.filter((r) => r.userId === userFilter);
+  //   if (search.trim()) {
+  //     const q = search.toLowerCase();
+  //     l = l.filter((r) =>
+  //       r.entries.some((e) => e.description.toLowerCase().includes(q)) ||
+  //       getUserById(r.userId)?.name.toLowerCase().includes(q)
+  //     );
+  //   }
+  //   return [...l].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+  // }, [reports, isLeader, employees, user, statusFilter, projectFilter, userFilter, search, getUserById]);
 
-  const openReport = list.find((r) => r.id === openId) ?? null;
+  let openReport = null;
+
+  const list = reports;
+  useEffect(() => {
+    
+    openReport = list?.find((r) => r.id === openId) ?? null;
+
+  }, [reports])
 
   return (
     <div className="space-y-6">
@@ -128,16 +135,16 @@ function HistoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {list.length === 0 && (
+              {list?.length === 0 && (
                 <tr>
                   <td colSpan={isLeader ? 7 : 6} className="px-6 py-12 text-center text-sm text-muted-foreground">
                     No reports match your filters.
                   </td>
                 </tr>
               )}
-              {list.map((r) => {
-                const u = getUserById(r.userId);
-                const projectNames = Array.from(new Set(r.entries.map((e) => getProjectById(e.projectId)?.name).filter(Boolean)));
+              {/* {list?.map((r) => {
+                // const u = getUserById(r.userId);
+                const projectNames = Array.from(new Set(r.timeEntries.map((e) => getProjectById(e.projectId)?.name).filter(Boolean)));
                 const updated = r.sentAt ?? r.verifiedAt ?? r.rejectedAt ?? r.submittedAt;
                 return (
                   <tr key={r.id} className="hover:bg-muted/30">
@@ -163,7 +170,7 @@ function HistoryPage() {
                     </td>
                   </tr>
                 );
-              })}
+              })} */}
             </tbody>
           </table>
         </div>
