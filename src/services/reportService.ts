@@ -32,7 +32,7 @@ const saveReport = async (data: Report) => {
 
     return response.status
 }
-const getReports = async (): Promise<ReportResponse[]> => {
+const getReports = async (): Promise<Report[]> => {
     const response = await fetch(`${baseUrl}api/report/all/`, {
         method: 'GET',
         credentials: 'include',
