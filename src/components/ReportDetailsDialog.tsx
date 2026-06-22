@@ -1,18 +1,26 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useData } from "@/lib/data-store";
-import type { WeeklyReport } from "@/lib/types";
 import { formatShortDate, formatWeekRange, totalHours } from "@/lib/format";
 import { StatusBadge } from "./StatusBadge";
+import { Status } from "@/Enum/Status";
+import { Report } from "@/types/reports";
+import { ProjectResponse } from "@/types/responses/ProjectResponse";
 
 interface Props {
-  report: WeeklyReport | null;
+  report: Report | null;
+  projects: ProjectResponse[] | undefined
   onClose: () => void;
 }
 
-export function ReportDetailsDialog({ report, onClose }: Props) {
-  const { getProjectById, getUserById } = useData();
+export function ReportDetailsDialog({ report, projects, onClose }: Props) {
+  const { getUserById } = useData();
+  // getProjectById
   const open = !!report;
   const user = report ? getUserById(report.userId) : null;
+
+  const getProjectById = (id: string) => {
+    return projects?.find((project) => project.id === id)
+  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -22,10 +30,10 @@ export function ReportDetailsDialog({ report, onClose }: Props) {
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between gap-3">
                 <span>{formatWeekRange(report.weekStart)}</span>
-                <StatusBadge status={report.status} />
+                <StatusBadge status={report.status ? report.status : Status.noStatus} />
               </DialogTitle>
               <DialogDescription>
-                {user?.name} · {totalHours(report.entries)}h total
+                {user?.name} · {totalHours(report.timeEntries)}h total
               </DialogDescription>
             </DialogHeader>
 
@@ -47,11 +55,11 @@ export function ReportDetailsDialog({ report, onClose }: Props) {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {report.entries.map((e) => (
+                  {report.timeEntries.map((e) => (
                     <tr key={e.id}>
                       <td className="px-6 py-2 whitespace-nowrap">{formatShortDate(e.date)}</td>
                       <td className="px-6 py-2">{getProjectById(e.projectId)?.name}</td>
-                      <td className="px-6 py-2 font-medium">{e.hours}h</td>
+                      <td className="px-6 py-2 font-medium">{e.hoursWorked}h</td>
                       <td className="px-6 py-2 text-muted-foreground">{e.description}</td>
                     </tr>
                   ))}

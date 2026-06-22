@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Eye, Search } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useData } from "@/lib/data-store";
@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ReportDetailsDialog } from "@/components/ReportDetailsDialog";
 import { useQuery } from "@tanstack/react-query";
-import { getReports } from "@/services/reportService";
+import { Status } from "@/Enum/Status";
+import { getAllProjects } from "@/services/projectService";
+import { useReports } from "@/hooks/useReports";
 
 export const Route = createFileRoute("/_authenticated/history")({
   component: HistoryPage,
@@ -23,17 +25,18 @@ function HistoryPage() {
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [userFilter, setUserFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null | undefined>(null);
 
-  const { projects, users, getUserById, getProjectById } = useData();
-  //reports
+  const { users } = useData();
   const isLeader = user!.role === "team_leader";
   const employees = users.filter((u) => u.role === "employee" && u.team === user!.team);
 
-  const { data: reports } = useQuery({
-    queryKey: ['getReports'],
-    queryFn: getReports
+  const { data: projects } = useQuery({
+    queryKey: ['getProjects'],
+    queryFn: getAllProjects
   })
+
+  const { data: reports } = useReports()
 
   // const list = useMemo(() => {
   //   let l = reports;
@@ -58,11 +61,11 @@ function HistoryPage() {
   let openReport = null;
 
   const list = reports;
-  useEffect(() => {
-    
-    openReport = list?.find((r) => r.id === openId) ?? null;
+  openReport = list?.find((r) => r.id === openId) ?? null;
 
-  }, [reports])
+  const projectNameById = useMemo(
+    () => new Map(projects?.map((project) => [project.id, project.name])
+    ), [projects])
 
   return (
     <div className="space-y-6">
@@ -100,7 +103,7 @@ function HistoryPage() {
               <SelectTrigger><SelectValue placeholder="Project" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All projects</SelectItem>
-                {projects.map((p) => (
+                {projects?.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -142,13 +145,20 @@ function HistoryPage() {
                   </td>
                 </tr>
               )}
-              {/* {list?.map((r) => {
+              {list?.map((r) => {
                 // const u = getUserById(r.userId);
-                const projectNames = Array.from(new Set(r.timeEntries.map((e) => getProjectById(e.projectId)?.name).filter(Boolean)));
+                const projectNames = [
+                  ...new Set(
+                    r.timeEntries
+                      .map((entry) => projectNameById.get(entry.projectId))
+                      .filter((name): name is string => name !== undefined)
+                  )
+                ]
+
                 const updated = r.sentAt ?? r.verifiedAt ?? r.rejectedAt ?? r.submittedAt;
                 return (
                   <tr key={r.id} className="hover:bg-muted/30">
-                    {isLeader && (
+                    {/* {isLeader && (
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-2">
                           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
@@ -157,11 +167,13 @@ function HistoryPage() {
                           <span className="font-medium">{u?.name}</span>
                         </div>
                       </td>
-                    )}
+                    )} */}
                     <td className="px-6 py-3">{formatWeekRange(r.weekStart)}</td>
-                    <td className="max-w-xs truncate px-6 py-3 text-muted-foreground">{projectNames.join(", ")}</td>
-                    <td className="px-6 py-3 font-medium">{totalHours(r.entries)}h</td>
-                    <td className="px-6 py-3"><StatusBadge status={r.status} /></td>
+                    <td className="max-w-xs truncate px-6 py-3 text-muted-foreground">{projectNames.join(', ')}</td>
+                    <td className="px-6 py-3 font-medium">{totalHours(r.timeEntries)}h</td>
+                    <td className="px-6 py-3">
+                      <StatusBadge status={r.status ? r.status : Status.noStatus} />
+                    </td>
                     <td className="px-6 py-3 text-muted-foreground">{updated ? formatDate(updated) : "—"}</td>
                     <td className="px-6 py-3 text-right">
                       <Button variant="ghost" size="sm" onClick={() => setOpenId(r.id)}>
@@ -170,13 +182,13 @@ function HistoryPage() {
                     </td>
                   </tr>
                 );
-              })} */}
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      <ReportDetailsDialog report={openReport} onClose={() => setOpenId(null)} />
+      <ReportDetailsDialog report={openReport} projects={projects} onClose={() => setOpenId(null)} />
     </div>
   );
 }

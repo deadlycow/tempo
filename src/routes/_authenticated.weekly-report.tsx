@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { addDays, getWeekStart, isoDate } from "@/lib/mock-data";
 import { dayLabel, formatShortDate, formatWeekRange, totalHours } from "@/lib/format";
-import type { WeeklyReport } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,7 +20,6 @@ import { Status } from "@/Enum/Status";
 
 import * as reportService from "@/services/reportService"
 import { parseReportStatus } from "@/lib/utils";
-// import * as timeEntryService from "@/services/timeEntryService"
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
   component: WeeklyReportPage,
@@ -149,9 +147,7 @@ function WeeklyReportPage() {
     //   reportId: report?.id || ""
     // }))
     // upsertReport(buildReport("draft"));
-    console.log(payload)
     var result = reportService.saveReport(payload)
-    console.log(result)
     toast.success("Draft saved");
   };
 

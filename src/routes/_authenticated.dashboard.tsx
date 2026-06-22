@@ -17,6 +17,9 @@ import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { formatWeekRange, totalHours } from "@/lib/format";
+import { useReports } from "@/hooks/useReports";
+import { Status } from "@/Enum/Status";
+import { useProjects } from "@/hooks/useProjects";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -31,13 +34,18 @@ function DashboardPage() {
 function EmployeeDashboard() {
   const { user } = useAuth();
   const { reports, getProjectById } = useData();
-  const mine = useMemo(() => reports.filter((r) => r.userId === user!.id), [reports, user]);
 
+  const { data: report = [] } = useReports()
+  const {data: projects = []} = useProjects()
+
+  // const mine = useMemo(() => reports.filter((r) => r.userId === user!.id), [reports, user]);
+  const mine = report
+  // console.log(JSON.stringify(timeEntries, null, 2))
   const counts = {
-    submitted: mine.filter((r) => r.status === "submitted").length,
-    verified: mine.filter((r) => r.status === "verified" || r.status === "sent").length,
-    rejected: mine.filter((r) => r.status === "rejected").length,
-    draft: mine.filter((r) => r.status === "draft").length,
+    submitted: mine?.filter((r) => r.status === Status.submitted.toLowerCase()).length ?? 0,
+    verified: mine?.filter((r) => r.status === Status.verified.toLowerCase() || r.status === Status.sent.toLowerCase()).length ?? 0,
+    rejected: mine?.filter((r) => r.status === Status.rejected.toLowerCase()).length ?? 0,
+    draft: mine?.filter((r) => r.status === Status.draft.toLowerCase()).length ?? 0,
   };
 
   const recent = [...mine]
@@ -81,12 +89,12 @@ function EmployeeDashboard() {
                 <div className="min-w-0">
                   <p className="font-medium">{formatWeekRange(r.weekStart)}</p>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {Array.from(new Set(r.entries.map((e) => getProjectById(e.projectId)?.name).filter(Boolean))).join(" · ")}
+                    {Array.from(new Set(r.timeEntries.map((e) => getProjectById(e.projectId)?.name).filter(Boolean))).join(" · ")}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="hidden text-sm text-muted-foreground sm:inline">{totalHours(r.entries)}h</span>
-                  <StatusBadge status={r.status} />
+                  <span className="hidden text-sm text-muted-foreground sm:inline">{totalHours(r.timeEntries)}h</span>
+                  <StatusBadge status={r.status ?? Status.noStatus} />
                 </div>
               </li>
             ))}
