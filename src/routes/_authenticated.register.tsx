@@ -59,7 +59,7 @@ function RegisterPage() {
 
   const [form, setForm] = useState<RegisterRequest>({ name: "", email: "", password: "", role: "" })
 
-  const { data: apiUsers = [], isLoading, error } = useQuery({
+  const { data: apiUsers = [] } = useQuery({
     queryKey: ['users'],
     queryFn: getAllUsers
   })

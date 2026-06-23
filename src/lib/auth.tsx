@@ -59,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userData: UserResponse = await me()
 
     setUser({
+      id: userData.userId,
       name: userData.name ?? "No name",
       email: userData.email,
       role: userData.role

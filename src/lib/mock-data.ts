@@ -1,22 +1,5 @@
 import type { Project, User, WeeklyReport } from "./types";
 
-export const users: User[] = [
-  { id: "u1", name: "Anna Lindqvist", email: "anna@acme.co", role: "employee", team: "Platform" },
-  { id: "u2", name: "Erik Johansson", email: "erik@acme.co", role: "employee", team: "Platform" },
-  { id: "u3", name: "Sofia Berg", email: "sofia@acme.co", role: "employee", team: "Platform" },
-  { id: "u4", name: "Marcus Nyström", email: "marcus@acme.co", role: "employee", team: "Platform" },
-  { id: "u5", name: "Karin Holm", email: "karin@acme.co", role: "team_leader", team: "Platform" },
-  { id: "u6", name: "Oliver Admin", email: "admin@acme.co", role: "admin", team: "Operations" },
-];
-
-export const projects: Project[] = [
-  { id: "p1", name: "Atlas Migration", client: "Northwind", color: "oklch(0.65 0.18 258)" },
-  { id: "p2", name: "Phoenix Mobile", client: "Globex", color: "oklch(0.7 0.16 155)" },
-  { id: "p3", name: "Internal Platform", client: "Internal", color: "oklch(0.78 0.16 75)" },
-  { id: "p4", name: "Customer Portal", client: "Initech", color: "oklch(0.65 0.14 230)" },
-  { id: "p5", name: "Data Warehouse", client: "Umbrella", color: "oklch(0.65 0.22 25)" },
-];
-
 // Helpers to generate weeks (Monday)
 function mondayOf(d: Date): Date {
   const date = new Date(d);
@@ -27,8 +10,16 @@ function mondayOf(d: Date): Date {
   return date;
 }
 
+// export function isoDate(d: Date): string {
+// return d.toISOString().slice(0, 10);
+// }
+
 export function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+const date = new Date(d)
+const y = date.getFullYear()
+const m = String(date.getMonth() + 1).padStart(2, "0")
+const day = String(date.getDate()).padStart(2, "0")
+return `${y}-${m}-${day}`
 }
 
 export function addDays(d: Date | string, n: number): Date {
@@ -57,6 +48,8 @@ function makeEntries(weekStart: string, projectIds: string[]): WeeklyReport["ent
   return entries;
 }
 
+
+
 const todayWeek = getWeekStart();
 const lastWeek = isoDate(addDays(todayWeek, -7));
 const twoWeeks = isoDate(addDays(todayWeek, -14));
@@ -81,4 +74,21 @@ export const seedReports: WeeklyReport[] = [
   { id: "r11", userId: "u4", weekStart: todayWeek, entries: makeEntries(todayWeek, ["p1", "p3"]), status: "submitted", submittedAt: new Date().toISOString() },
   { id: "r12", userId: "u4", weekStart: lastWeek, entries: makeEntries(lastWeek, ["p1"]), status: "verified", verifiedAt: new Date().toISOString(), reviewedBy: "u5" },
   { id: "r13", userId: "u4", weekStart: twoWeeks, entries: makeEntries(twoWeeks, ["p3", "p5"]), status: "sent", sentAt: new Date().toISOString(), reviewedBy: "u5" },
+];
+
+export const users: User[] = [
+  { id: "demo-u1", name: "Anna Lindqvist", email: "anna@acme.co", role: "employee", team: "Platform" },
+  { id: "demo-u2", name: "Erik Johansson", email: "erik@acme.co", role: "employee", team: "Platform" },
+  { id: "demo-u3", name: "Sofia Berg", email: "sofia@acme.co", role: "employee", team: "Platform" },
+  { id: "demo-u4", name: "Marcus Nyström", email: "marcus@acme.co", role: "employee", team: "Platform" },
+  { id: "demo-u5", name: "Karin Holm", email: "karin@acme.co", role: "team_leader", team: "Platform" },
+  { id: "demo-u6", name: "Oliver Admin", email: "admin@acme.co", role: "admin", team: "Operations" },
+];
+
+export const projects: Project[] = [
+  { id: "p1", name: "Atlas Migration", client: "Northwind", color: "oklch(0.65 0.18 258)" },
+  { id: "p2", name: "Phoenix Mobile", client: "Globex", color: "oklch(0.7 0.16 155)" },
+  { id: "p3", name: "Internal Platform", client: "Internal", color: "oklch(0.78 0.16 75)" },
+  { id: "p4", name: "Customer Portal", client: "Initech", color: "oklch(0.65 0.14 230)" },
+  { id: "p5", name: "Data Warehouse", client: "Umbrella", color: "oklch(0.65 0.22 25)" },
 ];

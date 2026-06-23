@@ -22,13 +22,13 @@ export interface TimeEntry {
   id: string;
   projectId: string;
   date: string; // ISO yyyy-mm-dd
-  hours: number;
+  hoursWorked: number;
   description: string;
 }
 
 export interface WeeklyReport {
   id: string;
-  userId: string;
+  userId?: string;
   weekStart: string; // ISO yyyy-mm-dd (Monday)
   entries: TimeEntry[];
   status: ReportStatus;

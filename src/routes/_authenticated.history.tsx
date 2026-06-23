@@ -10,6 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ReportDetailsDialog } from "@/components/ReportDetailsDialog";
+import { useQuery } from "@tanstack/react-query";
+import { Status } from "@/Enum/Status";
+import { getAllProjects } from "@/services/projectService";
+import { useReports } from "@/hooks/useReports";
 
 export const Route = createFileRoute("/_authenticated/history")({
   component: HistoryPage,
@@ -17,37 +21,51 @@ export const Route = createFileRoute("/_authenticated/history")({
 
 function HistoryPage() {
   const { user } = useAuth();
-  const { reports, projects, users, getUserById, getProjectById } = useData();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [userFilter, setUserFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null | undefined>(null);
 
+  const { users } = useData();
   const isLeader = user!.role === "team_leader";
   const employees = users.filter((u) => u.role === "employee" && u.team === user!.team);
 
-  const list = useMemo(() => {
-    let l = reports;
-    if (isLeader) {
-      l = l.filter((r) => employees.some((e) => e.id === r.userId));
-    } else {
-      l = l.filter((r) => r.userId === user!.id);
-    }
-    if (statusFilter !== "all") l = l.filter((r) => r.status === statusFilter);
-    if (projectFilter !== "all") l = l.filter((r) => r.entries.some((e) => e.projectId === projectFilter));
-    if (isLeader && userFilter !== "all") l = l.filter((r) => r.userId === userFilter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      l = l.filter((r) =>
-        r.entries.some((e) => e.description.toLowerCase().includes(q)) ||
-        getUserById(r.userId)?.name.toLowerCase().includes(q)
-      );
-    }
-    return [...l].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
-  }, [reports, isLeader, employees, user, statusFilter, projectFilter, userFilter, search, getUserById]);
+  const { data: projects } = useQuery({
+    queryKey: ['getProjects'],
+    queryFn: getAllProjects
+  })
 
-  const openReport = list.find((r) => r.id === openId) ?? null;
+  const { data: reports } = useReports()
+
+  // const list = useMemo(() => {
+  //   let l = reports;
+  //   if (isLeader) {
+  //     l = l.filter((r) => employees.some((e) => e.id === r.userId));
+  //   } else {
+  //     l = l.filter((r) => r.userId === user!.id);
+  //   }
+  //   if (statusFilter !== "all") l = l.filter((r) => r.status === statusFilter);
+  //   if (projectFilter !== "all") l = l.filter((r) => r.entries.some((e) => e.projectId === projectFilter));
+  //   if (isLeader && userFilter !== "all") l = l.filter((r) => r.userId === userFilter);
+  //   if (search.trim()) {
+  //     const q = search.toLowerCase();
+  //     l = l.filter((r) =>
+  //       r.entries.some((e) => e.description.toLowerCase().includes(q)) ||
+  //       getUserById(r.userId)?.name.toLowerCase().includes(q)
+  //     );
+  //   }
+  //   return [...l].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+  // }, [reports, isLeader, employees, user, statusFilter, projectFilter, userFilter, search, getUserById]);
+
+  let openReport = null;
+
+  const list = reports;
+  openReport = list?.find((r) => r.id === openId) ?? null;
+
+  const projectNameById = useMemo(
+    () => new Map(projects?.map((project) => [project.id, project.name])
+    ), [projects])
 
   return (
     <div className="space-y-6">
@@ -85,7 +103,7 @@ function HistoryPage() {
               <SelectTrigger><SelectValue placeholder="Project" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All projects</SelectItem>
-                {projects.map((p) => (
+                {projects?.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -120,16 +138,24 @@ function HistoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {list.length === 0 && (
+              {list?.length === 0 && (
                 <tr>
                   <td colSpan={isLeader ? 7 : 6} className="px-6 py-12 text-center text-sm text-muted-foreground">
                     No reports match your filters.
                   </td>
                 </tr>
               )}
-              {list.map((r) => {
-                const u = getUserById(r.userId);
-                const projectNames = Array.from(new Set(r.entries.map((e) => getProjectById(e.projectId)?.name).filter(Boolean)));
+              {list?.map((r) => {
+                // const u = getUserById(r.userId);
+                const u = user
+                const projectNames = [
+                  ...new Set(
+                    r.timeEntries
+                      .map((entry) => projectNameById.get(entry.projectId))
+                      .filter((name): name is string => name !== undefined)
+                  )
+                ]
+
                 const updated = r.sentAt ?? r.verifiedAt ?? r.rejectedAt ?? r.submittedAt;
                 return (
                   <tr key={r.id} className="hover:bg-muted/30">
@@ -137,16 +163,18 @@ function HistoryPage() {
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-2">
                           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                            {u?.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                            {u?.name.split(" ").map((u) => u[0]).join("").slice(0, 2)}
                           </div>
                           <span className="font-medium">{u?.name}</span>
                         </div>
                       </td>
                     )}
                     <td className="px-6 py-3">{formatWeekRange(r.weekStart)}</td>
-                    <td className="max-w-xs truncate px-6 py-3 text-muted-foreground">{projectNames.join(", ")}</td>
-                    <td className="px-6 py-3 font-medium">{totalHours(r.entries)}h</td>
-                    <td className="px-6 py-3"><StatusBadge status={r.status} /></td>
+                    <td className="max-w-xs truncate px-6 py-3 text-muted-foreground">{projectNames.join(', ')}</td>
+                    <td className="px-6 py-3 font-medium">{totalHours(r.timeEntries)}h</td>
+                    <td className="px-6 py-3">
+                      <StatusBadge status={r.status ? r.status : Status.noStatus} />
+                    </td>
                     <td className="px-6 py-3 text-muted-foreground">{updated ? formatDate(updated) : "—"}</td>
                     <td className="px-6 py-3 text-right">
                       <Button variant="ghost" size="sm" onClick={() => setOpenId(r.id)}>
@@ -161,7 +189,7 @@ function HistoryPage() {
         </div>
       </div>
 
-      <ReportDetailsDialog report={openReport} onClose={() => setOpenId(null)} />
+      <ReportDetailsDialog report={openReport} projects={projects} onClose={() => setOpenId(null)} />
     </div>
   );
 }

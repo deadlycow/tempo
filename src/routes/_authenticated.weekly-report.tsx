@@ -1,104 +1,145 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Save, Send, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { useData } from "@/lib/data-store";
 import { addDays, getWeekStart, isoDate } from "@/lib/mock-data";
 import { dayLabel, formatShortDate, formatWeekRange, totalHours } from "@/lib/format";
-import type { TimeEntry, WeeklyReport } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useQuery } from "@tanstack/react-query";
+import { getReport } from "@/services/reportService";
+import { getAllProjects } from "@/services/projectService";
+import { TimeEntry } from "@/types/timeEntries";
+import { Report } from "@/types/reports";
+import { Status } from "@/Enum/Status";
+import { parseReportStatus } from "@/lib/utils";
+import * as reportService from "@/services/reportService"
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
   component: WeeklyReportPage,
 });
 
 function WeeklyReportPage() {
-  const { user } = useAuth();
-  const { reports, projects, upsertReport } = useData();
+  // const { user } = useAuth();
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
 
-  const existing = useMemo(
-    () => reports.find((r) => r.userId === user!.id && r.weekStart === weekStart),
-    [reports, user, weekStart]
-  );
+  const [report, setReport] = useState<Report>()
 
-  const readOnly = !!existing && existing.status !== "draft" && existing.status !== "rejected";
+  const { data } = useQuery({
+    queryKey: ['report', weekStart],
+    queryFn: () => getReport({
+      date: new Date(weekStart)
+    })
+  })
 
-  const [entries, setEntries] = useState<TimeEntry[]>(() =>
-    existing?.entries ?? [{
-      id: crypto.randomUUID(),
-      projectId: projects[0]?.id ?? "",
-      date: weekStart,
-      hours: 8,
-      description: "",
-    }]
-  );
+  const existing = report
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects'],
+    queryFn: getAllProjects
+  })
+
+  const readOnly = !!existing && existing.status !== Status.draft && existing.status !== Status.rejected;
+
+  useEffect(() => {
+    if (data)
+      setReport({
+        ...data,
+        status: parseReportStatus(Status.draft)
+      })
+    else {
+      setReport({
+        id: "",
+        status: parseReportStatus(Status.draft),
+        weekStart,
+        timeEntries: []
+      })
+    }
+  }, [data, weekStart])
 
   // Reset when week changes
   const onChangeWeek = (delta: number) => {
     const next = isoDate(addDays(weekStart, delta * 7));
     setWeekStart(next);
-    const found = reports.find((r) => r.userId === user!.id && r.weekStart === next);
-    if (found) {
-      setEntries(found.entries);
-    } else {
-      setEntries([{ id: crypto.randomUUID(), projectId: projects[0]?.id ?? "", date: next, hours: 8, description: "" }]);
-    }
   };
 
   const updateEntry = (id: string, patch: Partial<TimeEntry>) => {
-    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
-  };
+    setReport((prev) => {
+      if (!prev) return prev
+
+      return {
+        ...prev,
+        timeEntries: prev.timeEntries.map((e) => (e.id === id ? { ...e, ...patch } : e))
+      }
+    });
+  }
 
   const addEntry = () => {
-    setEntries((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), projectId: projects[0]?.id ?? "", date: weekStart, hours: 0, description: "" },
-    ]);
+    setReport((prev) => {
+      if (!prev) return prev
+
+      return {
+        ...prev,
+        timeEntries: [
+          ...prev.timeEntries,
+          {
+            id: "", projectId: "", date: weekStart, hoursWorked: 0, description: ""
+          }]
+      }
+    }
+    );
   };
 
-  const removeEntry = (id: string) => setEntries((prev) => prev.filter((e) => e.id !== id));
+  const removeEntry = (id: string) => {
+    setReport(prev => {
+      if (!prev) return prev
+
+      return {
+        ...prev,
+        timeEntries: prev.timeEntries.filter(e => e.id !== id)
+      };
+    })
+  }
 
   const validate = (): string | null => {
-    if (entries.length === 0) return "Add at least one time entry.";
-    for (const e of entries) {
+    if (!report?.timeEntries) return "empty"
+    if (report?.timeEntries.length === 0) return "Add at least one time entry.";
+    for (const e of report?.timeEntries) {
       if (!e.projectId) return "Every entry needs a project.";
-      if (!e.hours || e.hours <= 0) return "Hours must be greater than zero.";
-      if (e.hours > 24) return "Hours per entry cannot exceed 24.";
-      if (!e.description.trim()) return "Add a short description for each entry.";
+      if (!e.hoursWorked || e.hoursWorked <= 0) return "Hours must be greater than zero.";
+      if (e.hoursWorked > 24) return "Hours per entry cannot exceed 24.";
     }
     return null;
   };
 
-  const buildReport = (status: WeeklyReport["status"]): WeeklyReport => ({
-    id: existing?.id ?? crypto.randomUUID(),
-    userId: user!.id,
-    weekStart,
-    entries,
-    status,
-    submittedAt: status === "submitted" ? new Date().toISOString() : existing?.submittedAt,
-  });
-
-  const onSaveDraft = () => {
-    upsertReport(buildReport("draft"));
+  const onSaveDraft = async () => {
+    if (!report) return
+    const payload: Report = {
+      id: report.id,
+      weekStart,
+      timeEntries: report.timeEntries
+    }
+    var result = reportService.saveReport(payload)
     toast.success("Draft saved");
   };
+
 
   const onSubmit = () => {
     const err = validate();
     if (err) return toast.error(err);
-    upsertReport(buildReport("submitted"));
+
+    // upsertReport(buildReport("submitted"));
+    // we dont have the weekly report for real users yet
     toast.success("Report submitted for verification");
     navigate({ to: "/history" });
   };
 
-  const total = totalHours(entries);
+  const total = totalHours(report?.timeEntries ?? []);
   const days = Array.from({ length: 7 }, (_, i) => isoDate(addDays(weekStart, i)));
 
   return (
@@ -108,7 +149,7 @@ function WeeklyReportPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Weekly time report</h1>
           <p className="mt-1 text-sm text-muted-foreground">Log hours for the selected week.</p>
         </div>
-        {existing && <StatusBadge status={existing.status} />}
+        {existing && <StatusBadge status={existing.status ?? Status.noStatus} />}
       </div>
 
       {readOnly && (
@@ -121,7 +162,7 @@ function WeeklyReportPage() {
         </div>
       )}
 
-      {existing?.status === "rejected" && existing.feedback && (
+      {existing?.status === Status.rejected && existing.feedback && (
         <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm">
           <AlertCircle className="mt-0.5 h-4 w-4 text-destructive" />
           <div>
@@ -157,7 +198,7 @@ function WeeklyReportPage() {
         {/* Day chips */}
         <div className="grid grid-cols-7 border-b text-center text-xs">
           {days.map((d) => {
-            const dayHours = entries.filter((e) => e.date === d).reduce((s, e) => s + (e.hours || 0), 0);
+            const dayHours = report?.timeEntries ? report?.timeEntries.filter((e) => e.date === d).reduce((s, e) => s + (e.hoursWorked || 0), 0) : 0;
             return (
               <div key={d} className="border-r px-2 py-3 last:border-r-0">
                 <p className="text-muted-foreground">{dayLabel(d)}</p>
@@ -169,7 +210,7 @@ function WeeklyReportPage() {
         </div>
 
         <div className="divide-y">
-          {entries.map((entry, idx) => (
+          {report?.timeEntries.map((entry, idx) => (
             <div key={entry.id} className="grid gap-3 p-4 md:grid-cols-12 md:items-start md:gap-4">
               <div className="md:col-span-3">
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">Project</label>
@@ -212,8 +253,8 @@ function WeeklyReportPage() {
                   min={0}
                   max={24}
                   step={0.25}
-                  value={entry.hours}
-                  onChange={(e) => updateEntry(entry.id, { hours: parseFloat(e.target.value) || 0 })}
+                  value={entry.hoursWorked}
+                  onChange={(e) => updateEntry(entry.id, { hoursWorked: parseFloat(e.target.value) || 0 })}
                   disabled={readOnly}
                 />
               </div>
@@ -232,7 +273,7 @@ function WeeklyReportPage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => removeEntry(entry.id)}
-                  disabled={readOnly || entries.length === 1}
+                  disabled={readOnly || report.timeEntries.length === 1}
                   aria-label={`Remove entry ${idx + 1}`}
                 >
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
