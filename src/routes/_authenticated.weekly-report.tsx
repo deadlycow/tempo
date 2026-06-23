@@ -10,23 +10,21 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
-
 import { useQuery } from "@tanstack/react-query";
 import { getReport } from "@/services/reportService";
 import { getAllProjects } from "@/services/projectService";
 import { TimeEntry } from "@/types/timeEntries";
 import { Report } from "@/types/reports";
 import { Status } from "@/Enum/Status";
-
-import * as reportService from "@/services/reportService"
 import { parseReportStatus } from "@/lib/utils";
+import * as reportService from "@/services/reportService"
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
   component: WeeklyReportPage,
 });
 
 function WeeklyReportPage() {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
 
@@ -46,11 +44,7 @@ function WeeklyReportPage() {
     queryFn: getAllProjects
   })
 
-  // const isDemoUser = user?.id?.startsWith("demo")
-
   const readOnly = !!existing && existing.status !== Status.draft && existing.status !== Status.rejected;
-
-  const [entries, setEntries] = useState<TimeEntry[]>([]);
 
   useEffect(() => {
     if (data)
@@ -66,7 +60,7 @@ function WeeklyReportPage() {
         timeEntries: []
       })
     }
-  }, [data, weekStart]) // Change ReportResponse(TimeEntry name of hoursWorked to hours)
+  }, [data, weekStart])
 
   // Reset when week changes
   const onChangeWeek = (delta: number) => {
@@ -123,30 +117,13 @@ function WeeklyReportPage() {
     return null;
   };
 
-  // const buildReport = (status: WeeklyReport["status"]): WeeklyReport => ({
-  //   id: existing?.id ?? "",
-  //   userId: user!.id,
-  //   weekStart,
-  //   entries,
-  //   status,
-  //   submittedAt: status === "submitted" ? new Date().toISOString() : existing?.submittedAd,
-  // });
-
   const onSaveDraft = async () => {
     if (!report) return
-    const payload : Report = {
+    const payload: Report = {
       id: report.id,
       weekStart,
       timeEntries: report.timeEntries
     }
-    // const payload: TimeEntryRequest[] = entries.map((e) => ({
-    //   projectId: e.projectId,
-    //   hoursWorked: e.hoursWorked,
-    //   date: new Date(e.date).toISOString().split('T')[0],
-    //   description: e.description || "",
-    //   reportId: report?.id || ""
-    // }))
-    // upsertReport(buildReport("draft"));
     var result = reportService.saveReport(payload)
     toast.success("Draft saved");
   };
@@ -296,7 +273,7 @@ function WeeklyReportPage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => removeEntry(entry.id)}
-                  disabled={readOnly || entries.length === 1}
+                  disabled={readOnly || report.timeEntries.length === 1}
                   aria-label={`Remove entry ${idx + 1}`}
                 >
                   <Trash2 className="h-4 w-4 text-muted-foreground" />

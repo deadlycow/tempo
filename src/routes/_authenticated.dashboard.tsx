@@ -36,7 +36,7 @@ function EmployeeDashboard() {
   const { reports, getProjectById } = useData();
 
   const { data: report = [] } = useReports()
-  const {data: projects = []} = useProjects()
+  const { data: projects = [] } = useProjects()
 
   // const mine = useMemo(() => reports.filter((r) => r.userId === user!.id), [reports, user]);
   const mine = report
@@ -130,7 +130,7 @@ function LeaderDashboard() {
   const projectHours = new Map<string, number>();
   teamReports.forEach((r) => {
     r.entries.forEach((e) => {
-      projectHours.set(e.projectId, (projectHours.get(e.projectId) ?? 0) + e.hours);
+      projectHours.set(e.projectId, (projectHours.get(e.projectId) ?? 0) + e.hoursWorked);
     });
   });
   const topProjects = Array.from(projectHours.entries())

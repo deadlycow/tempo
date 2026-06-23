@@ -1,10 +1,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useData } from "@/lib/data-store";
 import { formatShortDate, formatWeekRange, totalHours } from "@/lib/format";
 import { StatusBadge } from "./StatusBadge";
 import { Status } from "@/Enum/Status";
 import { Report } from "@/types/reports";
 import { ProjectResponse } from "@/types/responses/ProjectResponse";
+import { useAuth } from "@/lib/auth";
 
 interface Props {
   report: Report | null;
@@ -13,10 +13,8 @@ interface Props {
 }
 
 export function ReportDetailsDialog({ report, projects, onClose }: Props) {
-  const { getUserById } = useData();
-  // getProjectById
+  const { user } = useAuth()
   const open = !!report;
-  const user = report ? getUserById(report.userId) : null;
 
   const getProjectById = (id: string) => {
     return projects?.find((project) => project.id === id)

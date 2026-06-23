@@ -147,6 +147,7 @@ function HistoryPage() {
               )}
               {list?.map((r) => {
                 // const u = getUserById(r.userId);
+                const u = user
                 const projectNames = [
                   ...new Set(
                     r.timeEntries
@@ -158,16 +159,16 @@ function HistoryPage() {
                 const updated = r.sentAt ?? r.verifiedAt ?? r.rejectedAt ?? r.submittedAt;
                 return (
                   <tr key={r.id} className="hover:bg-muted/30">
-                    {/* {isLeader && (
+                    {isLeader && (
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-2">
                           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                            {u?.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                            {u?.name.split(" ").map((u) => u[0]).join("").slice(0, 2)}
                           </div>
                           <span className="font-medium">{u?.name}</span>
                         </div>
                       </td>
-                    )} */}
+                    )}
                     <td className="px-6 py-3">{formatWeekRange(r.weekStart)}</td>
                     <td className="max-w-xs truncate px-6 py-3 text-muted-foreground">{projectNames.join(', ')}</td>
                     <td className="px-6 py-3 font-medium">{totalHours(r.timeEntries)}h</td>
