@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 
 const useProjects = () => {
     return useQuery({
-        queryKey: ['reports'],
+        queryKey: ['projects'],
         queryFn: getAllProjects
     })
 }

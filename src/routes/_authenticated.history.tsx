@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Status } from "@/Enum/Status";
 import { getAllProjects } from "@/services/projectService";
 import { useReports } from "@/hooks/useReports";
+import { useProjects } from "@/hooks/useProjects";
 
 export const Route = createFileRoute("/_authenticated/history")({
   component: HistoryPage,
@@ -31,36 +32,31 @@ function HistoryPage() {
   const isLeader = user!.role === "team_leader";
   const employees = users.filter((u) => u.role === "employee" && u.team === user!.team);
 
-  const { data: projects } = useQuery({
-    queryKey: ['getProjects'],
-    queryFn: getAllProjects
-  })
-
+  const { data: projects } = useProjects()
   const { data: reports } = useReports()
 
-  // const list = useMemo(() => {
-  //   let l = reports;
-  //   if (isLeader) {
-  //     l = l.filter((r) => employees.some((e) => e.id === r.userId));
-  //   } else {
-  //     l = l.filter((r) => r.userId === user!.id);
-  //   }
-  //   if (statusFilter !== "all") l = l.filter((r) => r.status === statusFilter);
-  //   if (projectFilter !== "all") l = l.filter((r) => r.entries.some((e) => e.projectId === projectFilter));
-  //   if (isLeader && userFilter !== "all") l = l.filter((r) => r.userId === userFilter);
-  //   if (search.trim()) {
-  //     const q = search.toLowerCase();
-  //     l = l.filter((r) =>
-  //       r.entries.some((e) => e.description.toLowerCase().includes(q)) ||
-  //       getUserById(r.userId)?.name.toLowerCase().includes(q)
-  //     );
-  //   }
-  //   return [...l].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
-  // }, [reports, isLeader, employees, user, statusFilter, projectFilter, userFilter, search, getUserById]);
+  const list = useMemo(() => {
+    let l = reports ?? [];
+    if (isLeader) {
+      l = l.filter((r) => employees.some((e) => e.id === r.userId));
+    }
+    //  else {
+    //   l = l.filter((r) => r.userId === user!.id);
+    // }
+    if (statusFilter !== "all") l = l.filter((r) => r.status === statusFilter);
+    if (projectFilter !== "all") l = l.filter((r) => r.timeEntries.some((e) => e.projectId === projectFilter));
+    if (isLeader && userFilter !== "all") l = l.filter((r) => r.userId === userFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      l = l.filter((r) =>
+        r.timeEntries.some((e) => e.description?.toLowerCase().includes(q))
+      );
+    }
+    return [...l].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+  }, [reports, isLeader, employees, user, statusFilter, projectFilter, userFilter, search]);
 
   let openReport = null;
 
-  const list = reports;
   openReport = list?.find((r) => r.id === openId) ?? null;
 
   const projectNameById = useMemo(
