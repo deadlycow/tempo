@@ -95,9 +95,9 @@ function WeeklyReportPage() {
   }
 
   const validate = (): string | null => {
-    if (!report?.timeEntries) return "empty"
-    if (report?.timeEntries.length === 0) return "Add at least one time entry.";
-    for (const e of report?.timeEntries) {
+    if (!currentReport?.timeEntries) return "empty"
+    if (currentReport?.timeEntries.length === 0) return "Add at least one time entry.";
+    for (const e of currentReport?.timeEntries) {
       if (!e.projectId) return "Every entry needs a project.";
       if (!e.hoursWorked || e.hoursWorked <= 0) return "Hours must be greater than zero.";
       if (e.hoursWorked > 24) return "Hours per entry cannot exceed 24.";
@@ -106,11 +106,11 @@ function WeeklyReportPage() {
   };
 
   const createPayload = (): Report | null => {
-    if (!report) return null
+    if (!currentReport) return null
     return {
-      id: report.id,
+      id: currentReport.id,
       weekStart,
-      timeEntries: report.timeEntries
+      timeEntries: currentReport.timeEntries
     }
   }
 
@@ -200,7 +200,7 @@ function WeeklyReportPage() {
         {/* Day chips */}
         <div className="grid grid-cols-7 border-b text-center text-xs">
           {days.map((d) => {
-            const dayHours = report?.timeEntries ? report?.timeEntries.filter((e) => e.date === d).reduce((s, e) => s + (e.hoursWorked || 0), 0) : 0;
+            const dayHours = currentReport?.timeEntries ? currentReport?.timeEntries.filter((e) => e.date === d).reduce((s, e) => s + (e.hoursWorked || 0), 0) : 0;
             return (
               <div key={d} className="border-r px-2 py-3 last:border-r-0">
                 <p className="text-muted-foreground">{dayLabel(d)}</p>
@@ -212,7 +212,7 @@ function WeeklyReportPage() {
         </div>
 
         <div className="divide-y">
-          {report?.timeEntries.map((entry, idx) => (
+          {currentReport?.timeEntries.map((entry, idx) => (
             <div key={entry.id} className="grid gap-3 p-4 md:grid-cols-12 md:items-start md:gap-4">
               <div className="md:col-span-3">
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">Project</label>
@@ -275,7 +275,7 @@ function WeeklyReportPage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => removeEntry(entry.id)}
-                  disabled={readOnly || report.timeEntries.length === 1}
+                  disabled={readOnly || currentReport.timeEntries.length === 1}
                   aria-label={`Remove entry ${idx + 1}`}
                 >
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
