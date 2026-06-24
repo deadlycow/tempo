@@ -10,14 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
-import { useQuery } from "@tanstack/react-query";
-import { getReport } from "@/services/reportService";
-import { getAllProjects } from "@/services/projectService";
 import { TimeEntry } from "@/types/timeEntries";
 import { Report } from "@/types/reports";
 import { Status } from "@/Enum/Status";
 import { parseReportStatus } from "@/lib/utils";
 import * as reportService from "@/services/reportService"
+import { useProjects } from "@/hooks/useProjects";
+import { useReport } from "@/hooks/useReports";
 
 export const Route = createFileRoute("/_authenticated/weekly-report")({
   component: WeeklyReportPage,
@@ -28,39 +27,28 @@ function WeeklyReportPage() {
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
 
-  const [report, setReport] = useState<Report>()
+  const [currentReport, setCurrentReport] = useState<Report>()
 
-  const { data } = useQuery({
-    queryKey: ['report', weekStart],
-    queryFn: () => getReport({
-      date: new Date(weekStart)
-    })
-  })
+  const { data: report } = useReport(weekStart)
+  const { data: projects } = useProjects()
 
   const existing = report
-
-  const { data: projects = [] } = useQuery({
-    queryKey: ['projects'],
-    queryFn: getAllProjects
-  })
-
   const readOnly = !!existing && existing.status !== Status.draft && existing.status !== Status.rejected;
 
   useEffect(() => {
-    if (data)
-      setReport({
-        ...data,
-        status: parseReportStatus(Status.draft)
+    if (report)
+      setCurrentReport({
+        ...report,
       })
     else {
-      setReport({
+      setCurrentReport({
         id: "",
         status: parseReportStatus(Status.draft),
         weekStart,
         timeEntries: []
       })
     }
-  }, [data, weekStart])
+  }, [report, weekStart])
 
   // Reset when week changes
   const onChangeWeek = (delta: number) => {
@@ -69,7 +57,7 @@ function WeeklyReportPage() {
   };
 
   const updateEntry = (id: string, patch: Partial<TimeEntry>) => {
-    setReport((prev) => {
+    setCurrentReport((prev) => {
       if (!prev) return prev
 
       return {
@@ -80,7 +68,7 @@ function WeeklyReportPage() {
   }
 
   const addEntry = () => {
-    setReport((prev) => {
+    setCurrentReport((prev) => {
       if (!prev) return prev
 
       return {
@@ -96,7 +84,7 @@ function WeeklyReportPage() {
   };
 
   const removeEntry = (id: string) => {
-    setReport(prev => {
+    setCurrentReport(prev => {
       if (!prev) return prev
 
       return {
@@ -107,9 +95,9 @@ function WeeklyReportPage() {
   }
 
   const validate = (): string | null => {
-    if (!report?.timeEntries) return "empty"
-    if (report?.timeEntries.length === 0) return "Add at least one time entry.";
-    for (const e of report?.timeEntries) {
+    if (!currentReport?.timeEntries) return "empty"
+    if (currentReport?.timeEntries.length === 0) return "Add at least one time entry.";
+    for (const e of currentReport?.timeEntries) {
       if (!e.projectId) return "Every entry needs a project.";
       if (!e.hoursWorked || e.hoursWorked <= 0) return "Hours must be greater than zero.";
       if (e.hoursWorked > 24) return "Hours per entry cannot exceed 24.";
@@ -117,24 +105,38 @@ function WeeklyReportPage() {
     return null;
   };
 
-  const onSaveDraft = async () => {
-    if (!report) return
-    const payload: Report = {
-      id: report.id,
+  const createPayload = (): Report | null => {
+    if (!currentReport) return null
+    return {
+      id: currentReport.id,
       weekStart,
-      timeEntries: report.timeEntries
+      timeEntries: currentReport.timeEntries
     }
-    var result = reportService.saveReport(payload)
+  }
+
+  const onSaveDraft = async () => {
+    const payload = createPayload()
+    if (!payload) return
+
+    await reportService.saveReport({
+      ...payload,
+      status: Status.draft
+    })
     toast.success("Draft saved");
   };
 
-
-  const onSubmit = () => {
+  const onSubmit = async () => {
     const err = validate();
     if (err) return toast.error(err);
 
-    // upsertReport(buildReport("submitted"));
-    // we dont have the weekly report for real users yet
+    const basePayload = createPayload()
+    if (!basePayload) return
+
+    await reportService.saveReport({
+      ...basePayload,
+      status: Status.sent
+    })
+
     toast.success("Report submitted for verification");
     navigate({ to: "/history" });
   };
@@ -198,7 +200,7 @@ function WeeklyReportPage() {
         {/* Day chips */}
         <div className="grid grid-cols-7 border-b text-center text-xs">
           {days.map((d) => {
-            const dayHours = report?.timeEntries ? report?.timeEntries.filter((e) => e.date === d).reduce((s, e) => s + (e.hoursWorked || 0), 0) : 0;
+            const dayHours = currentReport?.timeEntries ? currentReport?.timeEntries.filter((e) => e.date === d).reduce((s, e) => s + (e.hoursWorked || 0), 0) : 0;
             return (
               <div key={d} className="border-r px-2 py-3 last:border-r-0">
                 <p className="text-muted-foreground">{dayLabel(d)}</p>
@@ -210,7 +212,7 @@ function WeeklyReportPage() {
         </div>
 
         <div className="divide-y">
-          {report?.timeEntries.map((entry, idx) => (
+          {currentReport?.timeEntries.map((entry, idx) => (
             <div key={entry.id} className="grid gap-3 p-4 md:grid-cols-12 md:items-start md:gap-4">
               <div className="md:col-span-3">
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">Project</label>
@@ -223,7 +225,7 @@ function WeeklyReportPage() {
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects.map((p) => (
+                    {projects?.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
                       </SelectItem>
@@ -273,7 +275,7 @@ function WeeklyReportPage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => removeEntry(entry.id)}
-                  disabled={readOnly || report.timeEntries.length === 1}
+                  disabled={readOnly || currentReport.timeEntries.length === 1}
                   aria-label={`Remove entry ${idx + 1}`}
                 >
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
