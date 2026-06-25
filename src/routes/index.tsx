@@ -6,6 +6,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) { return <div>Loading... </div> }
   return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} />;
 }

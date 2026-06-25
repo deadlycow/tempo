@@ -12,18 +12,15 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-const demoAccounts = [
-  { email: "anna@acme.co", role: "Employee" },
-  { email: "karin@acme.co", role: "Team Leader" },
-  { email: "admin@acme.co", role: "Admin" },
-];
-
 function LoginPage() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const [user, setUser] = useState<LoginRequest>({ email: "", password: "" })
   const [loading, setLoading] = useState(false);
 
+  if (isLoading) {
+    return <div>Loading... </div>
+  }
   if (isAuthenticated) return <Navigate to="/dashboard" />;
 
   const handleSubmit = async (e: SubmitEvent) => {
@@ -88,9 +85,7 @@ function LoginPage() {
                 id="email"
                 type="email"
                 value={user.email}
-                // onChange={(e) => setEmail(e.target.value)}
                 onChange={(e) => {
-                  // setEmail(e.target.value)
                   setUser(prev => ({ ...prev, email: e.target.value }))
                 }}
                 placeholder="you@company.com"
@@ -104,9 +99,7 @@ function LoginPage() {
                 id="password"
                 type="password"
                 value={user.password}
-                // onChange={(e) => setPassword(e.target.value)}
                 onChange={(e) => {
-                  // setPassword(e.target.value)
                   setUser(prev => ({ ...prev, password: e.target.value }))
                 }}
                 placeholder="••••••••"
@@ -117,27 +110,6 @@ function LoginPage() {
               {loading ? "Signing in..." : "Sign in"} <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </form>
-
-          <div className="rounded-xl border bg-muted/40 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Demo accounts</p>
-            <div className="mt-3 space-y-2">
-              {demoAccounts.map((a) => (
-                <button
-                  key={a.email}
-                  type="button"
-                  onClick={() => {
-                    // setEmail(a.email)
-                    setUser(prev => ({ ...prev, email: a.email }))
-                    setUser(prev => ({ ...prev, password: "demo" }))
-                  }}
-                  className="flex w-full items-center justify-between rounded-lg border bg-card px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
-                >
-                  <span className="font-medium">{a.email}</span>
-                  <span className="text-xs text-muted-foreground">{a.role}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
