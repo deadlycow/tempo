@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Save, Send, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { addDays, getWeekStart, isoDate } from "@/lib/mock-data";
+import { addDays, getWeekStart, isoDate } from "@/lib/format";
 import { dayLabel, formatShortDate, formatWeekRange, totalHours } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

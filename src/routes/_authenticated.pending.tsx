@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { CheckCircle2, ChevronDown, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { useData } from "@/lib/data-store";
 import { formatDate, formatShortDate, formatWeekRange, totalHours } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useReports } from "@/hooks/useReports";
+import { useUsers } from "@/hooks/useUsers";
+import { useProjects } from "@/hooks/useProjects";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Status } from "@/Enum/Status";
+import * as reportService from "@/services/reportService";
+import type { Report } from "@/types/reports";
 
 export const Route = createFileRoute("/_authenticated/pending")({
   component: PendingPage,
@@ -24,16 +30,25 @@ export const Route = createFileRoute("/_authenticated/pending")({
 
 function PendingPage() {
   const { user } = useAuth();
-  const { reports, users, getUserById, getProjectById, setReportStatus } = useData();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
 
-  const employees = users.filter((u) => u.role === "employee" && u.team === user!.team);
+  const { data: reports = [] } = useReports();
+  const { data: users = [] } = useUsers();
+  const { data: projects = [] } = useProjects();
+
+  const queryClient = useQueryClient();
+  const { mutate: updateStatus } = useMutation({
+    mutationFn: (report: Report) => reportService.saveReport(report),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reports"] }),
+  });
+
+  const employees = users.filter((u) => u.role === "employee");
   const pending = useMemo(
     () =>
       reports
-        .filter((r) => r.status === "submitted" && employees.some((e) => e.id === r.userId))
+        .filter((r) => r.status === Status.submitted && employees.some((e) => e.userId === r.userId))
         .sort((a, b) => (b.submittedAt ?? "").localeCompare(a.submittedAt ?? "")),
     [reports, employees]
   );
@@ -43,17 +58,31 @@ function PendingPage() {
   }
 
   const handleVerify = (id: string) => {
-    setReportStatus(id, "verified", { reviewedBy: user!.id });
-    toast.success("Report verified");
+    const report = reports.find((r) => r.id === id);
+    if (!report) return;
+    const now = new Date().toISOString();
+    updateStatus(
+      { ...report, status: Status.verified, verifiedAt: now, reviewedBy: user!.id },
+      { onSuccess: () => toast.success("Report verified") }
+    );
   };
 
   const handleReject = () => {
     if (!rejectId) return;
     if (!feedback.trim()) return toast.error("Please provide feedback");
-    setReportStatus(rejectId, "rejected", { feedback, reviewedBy: user!.id });
-    toast.success("Report rejected with feedback");
-    setRejectId(null);
-    setFeedback("");
+    const report = reports.find((r) => r.id === rejectId);
+    if (!report) return;
+    const now = new Date().toISOString();
+    updateStatus(
+      { ...report, status: Status.rejected, rejectedAt: now, feedback, reviewedBy: user!.id },
+      {
+        onSuccess: () => {
+          toast.success("Report rejected with feedback");
+          setRejectId(null);
+          setFeedback("");
+        },
+      }
+    );
   };
 
   return (
@@ -74,17 +103,17 @@ function PendingPage() {
           </div>
         )}
         {pending.map((r) => {
-          const u = getUserById(r.userId);
+          const u = users.find((u) => u.userId === r.userId);
           const expanded = expandedId === r.id;
           return (
             <div key={r.id} className="overflow-hidden rounded-xl border bg-card shadow-soft">
               <button
-                onClick={() => setExpandedId(expanded ? null : r.id)}
+                onClick={() => setExpandedId(expanded ? null : (r.id ?? null))}
                 className="flex w-full flex-wrap items-center justify-between gap-3 px-6 py-4 text-left hover:bg-muted/30"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                    {u?.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                    {(u?.name ?? "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}
                   </div>
                   <div>
                     <p className="font-medium">{u?.name}</p>
@@ -94,8 +123,8 @@ function PendingPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium">{totalHours(r.entries)}h</span>
-                  <StatusBadge status={r.status} />
+                  <span className="text-sm font-medium">{totalHours(r.timeEntries)}h</span>
+                  <StatusBadge status={r.status ?? Status.noStatus} />
                   <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
                 </div>
               </button>
@@ -113,11 +142,11 @@ function PendingPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {r.entries.map((e) => (
+                        {r.timeEntries.map((e) => (
                           <tr key={e.id}>
                             <td className="whitespace-nowrap px-6 py-2">{formatShortDate(e.date)}</td>
-                            <td className="px-6 py-2">{getProjectById(e.projectId)?.name}</td>
-                            <td className="px-6 py-2 font-medium">{e.hours}h</td>
+                            <td className="px-6 py-2">{projects.find((p) => p.id === e.projectId)?.name}</td>
+                            <td className="px-6 py-2 font-medium">{e.hoursWorked}h</td>
                             <td className="px-6 py-2 text-muted-foreground">{e.description}</td>
                           </tr>
                         ))}
@@ -125,10 +154,10 @@ function PendingPage() {
                     </table>
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-card px-6 py-3">
-                    <Button variant="outline" onClick={() => setRejectId(r.id)}>
+                    <Button variant="outline" onClick={() => setRejectId(r.id ?? null)}>
                       <XCircle className="mr-2 h-4 w-4" /> Reject
                     </Button>
-                    <Button onClick={() => handleVerify(r.id)}>
+                    <Button onClick={() => handleVerify(r.id ?? "")}>
                       <CheckCircle2 className="mr-2 h-4 w-4" /> Verify
                     </Button>
                   </div>

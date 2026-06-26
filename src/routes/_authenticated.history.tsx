@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Eye, Search } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useData } from "@/lib/data-store";
 import { formatDate, formatWeekRange, totalHours } from "@/lib/format";
 import type { ReportStatus } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -10,11 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ReportDetailsDialog } from "@/components/ReportDetailsDialog";
-import { useQuery } from "@tanstack/react-query";
 import { Status } from "@/Enum/Status";
-import { getAllProjects } from "@/services/projectService";
 import { useReports } from "@/hooks/useReports";
 import { useProjects } from "@/hooks/useProjects";
+import { useUsers } from "@/hooks/useUsers";
 
 export const Route = createFileRoute("/_authenticated/history")({
   component: HistoryPage,
@@ -28,9 +26,9 @@ function HistoryPage() {
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null | undefined>(null);
 
-  const { users } = useData();
+  const { data: users = [] } = useUsers();
   const isLeader = user!.role === "team_leader";
-  const employees = users.filter((u) => u.role === "employee" && u.team === user!.team);
+  const employees = users.filter((u) => u.role === "employee");
 
   const { data: projects } = useProjects()
   const { data: reports } = useReports()
@@ -38,7 +36,7 @@ function HistoryPage() {
   const list = useMemo(() => {
     let l = reports ?? [];
     if (isLeader) {
-      l = l.filter((r) => employees.some((e) => e.id === r.userId));
+      l = l.filter((r) => employees.some((e) => e.userId === r.userId));
     }
     //  else {
     //   l = l.filter((r) => r.userId === user!.id);
@@ -112,7 +110,7 @@ function HistoryPage() {
                 <SelectContent>
                   <SelectItem value="all">All employees</SelectItem>
                   {employees.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                    <SelectItem key={e.userId} value={e.userId ?? ""}>{e.name ?? e.email}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

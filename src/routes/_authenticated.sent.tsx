@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { useData } from "@/lib/data-store";
 import { formatDate, formatWeekRange, totalHours } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useReports } from "@/hooks/useReports";
+import { useUsers } from "@/hooks/useUsers";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Status } from "@/Enum/Status";
+import * as reportService from "@/services/reportService";
 
 export const Route = createFileRoute("/_authenticated/sent")({
   component: SentPage,
@@ -23,15 +27,30 @@ export const Route = createFileRoute("/_authenticated/sent")({
 
 function SentPage() {
   const { user } = useAuth();
-  const { reports, users, getUserById, bulkSetStatus } = useData();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const employees = users.filter((u) => u.role === "employee" && u.team === user!.team);
+  const { data: reports = [] } = useReports();
+  const { data: users = [] } = useUsers();
+
+  const queryClient = useQueryClient();
+  const { mutate: sendReports } = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const now = new Date().toISOString();
+      await Promise.all(
+        reports
+          .filter((r) => ids.includes(r.id ?? ""))
+          .map((r) => reportService.saveReport({ ...r, status: Status.sent, sentAt: now, reviewedBy: user!.id }))
+      );
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reports"] }),
+  });
+
+  const employees = users.filter((u) => u.role === "employee");
   const verified = useMemo(
     () =>
       reports
-        .filter((r) => r.status === "verified" && employees.some((e) => e.id === r.userId))
+        .filter((r) => r.status === Status.verified && employees.some((e) => e.userId === r.userId))
         .sort((a, b) => (b.verifiedAt ?? "").localeCompare(a.verifiedAt ?? "")),
     [reports, employees]
   );
@@ -47,18 +66,22 @@ function SentPage() {
 
   const toggleAll = () => {
     if (selected.size === verified.length) setSelected(new Set());
-    else setSelected(new Set(verified.map((r) => r.id)));
+    else setSelected(new Set(verified.map((r) => r.id ?? "")));
   };
 
   const totalSelectedHours = verified
-    .filter((r) => selected.has(r.id))
-    .reduce((s, r) => s + totalHours(r.entries), 0);
+    .filter((r) => selected.has(r.id ?? ""))
+    .reduce((s, r) => s + totalHours(r.timeEntries), 0);
 
   const handleSend = () => {
-    bulkSetStatus(Array.from(selected), "sent", user!.id);
-    toast.success(`${selected.size} report${selected.size === 1 ? "" : "s"} sent for payroll`);
-    setSelected(new Set());
-    setConfirmOpen(false);
+    const ids = Array.from(selected);
+    sendReports(ids, {
+      onSuccess: () => {
+        toast.success(`${ids.length} report${ids.length === 1 ? "" : "s"} sent for payroll`);
+        setSelected(new Set());
+        setConfirmOpen(false);
+      },
+    });
   };
 
   return (
@@ -103,28 +126,28 @@ function SentPage() {
                 </tr>
               )}
               {verified.map((r) => {
-                const u = getUserById(r.userId);
-                const checked = selected.has(r.id);
+                const u = users.find((u) => u.userId === r.userId);
+                const checked = selected.has(r.id ?? "");
                 return (
                   <tr
                     key={r.id}
                     className={checked ? "bg-primary/5" : "hover:bg-muted/30"}
                   >
                     <td className="px-6 py-3">
-                      <Checkbox checked={checked} onCheckedChange={() => toggle(r.id)} aria-label={`Select ${u?.name}`} />
+                      <Checkbox checked={checked} onCheckedChange={() => toggle(r.id ?? "")} aria-label={`Select ${u?.name}`} />
                     </td>
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-2">
                         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                          {u?.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                          {(u?.name ?? "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}
                         </div>
                         <span className="font-medium">{u?.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-3">{formatWeekRange(r.weekStart)}</td>
-                    <td className="px-6 py-3 font-medium">{totalHours(r.entries)}h</td>
+                    <td className="px-6 py-3 font-medium">{totalHours(r.timeEntries)}h</td>
                     <td className="px-6 py-3 text-muted-foreground">{r.verifiedAt ? formatDate(r.verifiedAt) : "—"}</td>
-                    <td className="px-6 py-3"><StatusBadge status={r.status} /></td>
+                    <td className="px-6 py-3"><StatusBadge status={r.status ?? Status.noStatus} /></td>
                   </tr>
                 );
               })}

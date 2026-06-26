@@ -12,7 +12,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useData } from "@/lib/data-store";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,7 @@ import { formatWeekRange, totalHours } from "@/lib/format";
 import { useReports } from "@/hooks/useReports";
 import { Status } from "@/Enum/Status";
 import { useProjects } from "@/hooks/useProjects";
+import { useUsers } from "@/hooks/useUsers";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -33,22 +33,17 @@ function DashboardPage() {
 
 function EmployeeDashboard() {
   const { user } = useAuth();
-  const { reports, getProjectById } = useData();
+  const { data: reports = [] } = useReports();
+  const { data: projects = [] } = useProjects();
 
-  const { data: report = [] } = useReports()
-  const { data: projects = [] } = useProjects()
-
-  // const mine = useMemo(() => reports.filter((r) => r.userId === user!.id), [reports, user]);
-  const mine = report
-  // console.log(JSON.stringify(timeEntries, null, 2))
   const counts = {
-    submitted: mine?.filter((r) => r.status === Status.submitted.toLowerCase()).length ?? 0,
-    verified: mine?.filter((r) => r.status === Status.verified.toLowerCase() || r.status === Status.sent.toLowerCase()).length ?? 0,
-    rejected: mine?.filter((r) => r.status === Status.rejected.toLowerCase()).length ?? 0,
-    draft: mine?.filter((r) => r.status === Status.draft.toLowerCase()).length ?? 0,
+    submitted: reports.filter((r) => r.status === Status.submitted).length,
+    verified: reports.filter((r) => r.status === Status.verified || r.status === Status.sent).length,
+    rejected: reports.filter((r) => r.status === Status.rejected).length,
+    draft: reports.filter((r) => r.status === Status.draft).length,
   };
 
-  const recent = [...mine]
+  const recent = [...reports]
     .sort((a, b) => b.weekStart.localeCompare(a.weekStart))
     .slice(0, 5);
 
@@ -89,7 +84,7 @@ function EmployeeDashboard() {
                 <div className="min-w-0">
                   <p className="font-medium">{formatWeekRange(r.weekStart)}</p>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {Array.from(new Set(r.timeEntries.map((e) => getProjectById(e.projectId)?.name).filter(Boolean))).join(" · ")}
+                    {Array.from(new Set(r.timeEntries.map((e) => projects.find((p) => p.id === e.projectId)?.name).filter(Boolean))).join(" · ")}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -107,29 +102,33 @@ function EmployeeDashboard() {
 
 function LeaderDashboard() {
   const { user } = useAuth();
-  const { reports, users, getUserById, getProjectById } = useData();
+  const { data: reports = [] } = useReports();
+  const { data: users = [] } = useUsers();
+  const { data: projects = [] } = useProjects();
 
-  const employees = users.filter((u) => u.role === "employee" && u.team === user!.team);
-  const teamReports = reports.filter((r) => employees.some((e) => e.id === r.userId));
+  const employees = users.filter((u) => u.role === "employee");
+  const teamReports = useMemo(
+    () => reports.filter((r) => employees.some((e) => e.userId === r.userId)),
+    [reports, employees]
+  );
 
   const counts = {
-    pending: teamReports.filter((r) => r.status === "submitted").length,
-    verified: teamReports.filter((r) => r.status === "verified").length,
-    sent: teamReports.filter((r) => r.status === "sent").length,
+    pending: teamReports.filter((r) => r.status === Status.submitted).length,
+    verified: teamReports.filter((r) => r.status === Status.verified).length,
+    sent: teamReports.filter((r) => r.status === Status.sent).length,
     employees: employees.length,
   };
 
-  const totalTeamHours = teamReports.reduce((sum, r) => sum + totalHours(r.entries), 0);
+  const totalTeamHours = teamReports.reduce((sum, r) => sum + totalHours(r.timeEntries), 0);
 
   const pendingList = teamReports
-    .filter((r) => r.status === "submitted")
+    .filter((r) => r.status === Status.submitted)
     .sort((a, b) => (b.submittedAt ?? "").localeCompare(a.submittedAt ?? ""))
     .slice(0, 6);
 
-  // Project breakdown
   const projectHours = new Map<string, number>();
   teamReports.forEach((r) => {
-    r.entries.forEach((e) => {
+    r.timeEntries.forEach((e) => {
       projectHours.set(e.projectId, (projectHours.get(e.projectId) ?? 0) + e.hoursWorked);
     });
   });
@@ -161,16 +160,16 @@ function LeaderDashboard() {
             </Link>
           </div>
           {pendingList.length === 0 ? (
-            <EmptyState message="No reports awaiting review. " />
+            <EmptyState message="No reports awaiting review." />
           ) : (
             <ul className="divide-y">
               {pendingList.map((r) => {
-                const u = getUserById(r.userId);
+                const u = users.find((u) => u.userId === r.userId);
                 return (
                   <li key={r.id} className="flex items-center justify-between gap-4 px-6 py-4">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                        {u?.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                        {(u?.name ?? "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate font-medium">{u?.name}</p>
@@ -178,8 +177,8 @@ function LeaderDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span>{totalHours(r.entries)}h</span>
-                      <StatusBadge status={r.status} />
+                      <span>{totalHours(r.timeEntries)}h</span>
+                      <StatusBadge status={r.status ?? Status.noStatus} />
                     </div>
                   </li>
                 );
@@ -195,7 +194,7 @@ function LeaderDashboard() {
           </div>
           <div className="mt-5 space-y-4">
             {topProjects.map(([pid, h]) => {
-              const p = getProjectById(pid);
+              const p = projects.find((p) => p.id === pid);
               return (
                 <div key={pid}>
                   <div className="mb-1 flex items-center justify-between text-sm">
