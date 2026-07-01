@@ -36,6 +36,7 @@ function PendingPage() {
   const { data: reports = [] } = useReports();
   const { data: users = [] } = useUsers();
   const { data: projects = [] } = useProjects();
+  const projectNameById = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
 
   const queryClient = useQueryClient();
   const { mutate: changeStatus } = useMutation({
@@ -115,7 +116,7 @@ function PendingPage() {
                   <div>
                     <p className="font-medium">{u?.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatWeekRange(r.weekStart)} · submitted {r.submittedAt ? formatDate(r.submittedAt) : ""}
+                      {projectNameById.get(r.projectId ?? "") ?? "Unknown project"} · {formatWeekRange(r.weekStart)} · submitted {r.submittedAt ? formatDate(r.submittedAt) : ""}
                     </p>
                   </div>
                 </div>

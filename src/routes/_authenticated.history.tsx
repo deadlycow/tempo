@@ -64,7 +64,7 @@ function HistoryPage() {
   const list = useMemo(() => {
     let l = reports ?? [];
     if (statusFilter !== "all") l = l.filter((r) => r.status === statusFilter);
-    if (projectFilter !== "all") l = l.filter((r) => r.timeEntries.some((e) => e.projectId === projectFilter));
+    if (projectFilter !== "all") l = l.filter((r) => r.projectId === projectFilter);
     if (showEmployee && userFilter !== "all") l = l.filter((r) => r.userId === userFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -166,13 +166,7 @@ function HistoryPage() {
               )}
               {list?.map((r) => {
                 const u = users.find((u) => u.userId === r.userId);
-                const projectNames = [
-                  ...new Set(
-                    r.timeEntries
-                      .map((entry) => projectNameById.get(entry.projectId))
-                      .filter((name): name is string => name !== undefined)
-                  ),
-                ];
+                const projectName = r.projectId ? (projectNameById.get(r.projectId) ?? "Unknown") : "—";
                 const updated = r.sentAt ?? r.forwardedAt ?? r.verifiedAt ?? r.rejectedAt ?? r.submittedAt;
                 return (
                   <tr key={r.id} className="hover:bg-muted/30">
@@ -187,7 +181,7 @@ function HistoryPage() {
                       </td>
                     )}
                     <td className="px-6 py-3">{formatWeekRange(r.weekStart)}</td>
-                    <td className="max-w-xs truncate px-6 py-3 text-muted-foreground">{projectNames.join(", ")}</td>
+                    <td className="max-w-xs truncate px-6 py-3 text-muted-foreground">{projectName}</td>
                     <td className="px-6 py-3 font-medium">{totalHours(r.timeEntries)}h</td>
                     <td className="px-6 py-3">
                       <StatusBadge status={r.status ?? Status.noStatus} />

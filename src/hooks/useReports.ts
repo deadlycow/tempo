@@ -4,9 +4,7 @@ import * as reportService from "@/services/reportService"
 const useReport = (weekStart: string) => {
     return useQuery({
         queryKey: ['report', weekStart],
-        queryFn: () => reportService.getReport({
-            date: new Date(weekStart)
-        })
+        queryFn: () => reportService.getWeekReports(weekStart)
     })
 }
 

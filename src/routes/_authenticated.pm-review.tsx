@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { useReports } from "@/hooks/useReports";
 import { useUsers } from "@/hooks/useUsers";
+import { useProjects } from "@/hooks/useProjects";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Status } from "@/Enum/Status";
 import * as reportService from "@/services/reportService";
@@ -35,6 +36,8 @@ function PmReviewPage() {
 
   const { data: reports = [] } = useReports();
   const { data: users = [] } = useUsers();
+  const { data: projects = [] } = useProjects();
+  const projectNameById = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
 
   const queryClient = useQueryClient();
   const { mutate: sendToPayroll } = useMutation({
@@ -113,6 +116,7 @@ function PmReviewPage() {
                   />
                 </th>
                 <th className="px-6 py-3 font-medium">Employee</th>
+                <th className="px-6 py-3 font-medium">Project</th>
                 <th className="px-6 py-3 font-medium">Week</th>
                 <th className="px-6 py-3 font-medium">Hours</th>
                 <th className="px-6 py-3 font-medium">Forwarded</th>
@@ -122,7 +126,7 @@ function PmReviewPage() {
             <tbody className="divide-y">
               {forwarded.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="px-6 py-12 text-center text-sm text-muted-foreground">
                     No reports forwarded by team leaders yet.
                   </td>
                 </tr>
@@ -143,6 +147,7 @@ function PmReviewPage() {
                         <span className="font-medium">{u?.name}</span>
                       </div>
                     </td>
+                    <td className="px-6 py-3 text-muted-foreground">{projectNameById.get(r.projectId ?? "") ?? "—"}</td>
                     <td className="px-6 py-3">{formatWeekRange(r.weekStart)}</td>
                     <td className="px-6 py-3 font-medium">{totalHours(r.timeEntries)}h</td>
                     <td className="px-6 py-3 text-muted-foreground">{r.forwardedAt ? formatDate(r.forwardedAt) : "—"}</td>

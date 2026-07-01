@@ -1,52 +1,44 @@
-import { GetReportRequest, Report, ReportResponse } from "@/types/reports"
+import { Report } from "@/types/reports"
 
 const baseUrl = "http://localhost:3000/"
 
-const getReport = async (data: GetReportRequest): Promise<Report | null> => {
-    const response = await fetch(`${baseUrl}api/report`, {
-        method: 'POST',
+const getWeekReports = async (weekStart: string): Promise<Report[]> => {
+    const response = await fetch(`${baseUrl}api/report/week?weekStart=${weekStart}`, {
+        method: 'GET',
         credentials: 'include',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            date: data.date.toISOString().split('T')[0]
-        })
+        headers: { 'Content-Type': 'application/json' }
     })
-    if (response.status === 404)
-        return null
-
+    if (!response.ok) return []
     return response.json()
 }
-const saveReport = async (data: Report) => {
+
+const saveReport = async (data: {
+    weekStart: string
+    status: string
+    timeEntries: Report['timeEntries']
+    submittedAt?: string
+    feedback?: string
+}) => {
     const response = await fetch(`${baseUrl}api/report/upsert`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    if (!response.ok)
-        return null
-
+    if (!response.ok) return null
     return response.status
 }
+
 const getReports = async (): Promise<Report[]> => {
     const response = await fetch(`${baseUrl}api/report/all/`, {
         method: 'GET',
         credentials: 'include',
-        headers: {
-            'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
     })
-    if (!response.ok)
-        return []
-
-    const data = await response.json();
-
-    return data
+    if (!response.ok) return []
+    return response.json()
 }
+
 const updateReportStatus = async (reportId: string, data: {
     status: string
     feedback?: string
@@ -67,7 +59,7 @@ const updateReportStatus = async (reportId: string, data: {
 
 export {
     getReports,
-    getReport,
+    getWeekReports,
     saveReport,
     updateReportStatus
 }
