@@ -52,7 +52,7 @@ function ProjectPage() {
 
   const { data: allProjects = [], isLoading } = useProjects();
   const { data: allUsers = [] } = useUsers();
-  const assignableUsers = allUsers.filter((u) => u.role !== "admin");
+  const assignableUsers = allUsers.filter((u) => u.role === "employee" || u.role === "team_leader");
 
   const today = new Date().toISOString().split("T")[0];
 
