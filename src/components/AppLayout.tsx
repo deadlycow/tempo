@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Clock3, LayoutDashboard, History, Inbox, Send, LogOut, Menu, X, FileEdit, UserPlus, FolderCog } from "lucide-react";
+import { Clock3, LayoutDashboard, History, Inbox, Send, LogOut, Menu, X, FileEdit, UserPlus, FolderCog, Forward } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -20,21 +20,27 @@ const employeeNav: NavItem[] = [
 const leaderNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/pending", label: "Pending Reports", icon: Inbox },
-  { to: "/sent", label: "Send Reports", icon: Send },
+  { to: "/sent", label: "Forward Reports", icon: Forward },
   { to: "/history", label: "History", icon: History },
   { to: "/register", label: "Add User", icon: UserPlus },
+  { to: "/project", label: "Projects", icon: FolderCog },
 ];
 
 const projectNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/project", label: "Projects", icon: FolderCog }
+  { to: "/pm-review", label: "Review Reports", icon: Inbox },
+  { to: "/project", label: "Projects", icon: FolderCog },
+  { to: "/history", label: "History", icon: History },
 ]
 
 const adminNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/pending", label: "Pending Reports", icon: Inbox },
+  { to: "/sent", label: "Forward Reports", icon: Forward },
+  { to: "/pm-review", label: "PM Review", icon: Send },
   { to: "/history", label: "History", icon: History },
   { to: "/register", label: "Add User", icon: UserPlus },
-  { to: "/project", label: "Projects", icon: FolderCog }
+  { to: "/project", label: "Projects", icon: FolderCog },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -44,8 +50,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   if (!user) return null;
+  const isLeaderRole = user.role === "team_leader" || (user.role === "employee" && !!user.isProjectLeader);
   const items =
-    user.role === "admin" ? adminNav : user.role === "project_manager" ? projectNav : user.role === "team_leader" ? leaderNav : employeeNav;
+    user.role === "admin" ? adminNav : user.role === "project_manager" ? projectNav : isLeaderRole ? leaderNav : employeeNav;
 
   const handleLogout = () => {
     logout();
@@ -86,7 +93,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 space-y-1 p-3">
           <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-            {user.role === "admin" ? "Admin" : user.role === "team_leader" ? "Team Leader" : "Employee"}
+            {user.role === "admin" ? "Admin" : user.role === "project_manager" ? "Project Manager" : isLeaderRole ? "Team Leader" : "Employee"}
           </p>
           {items.map((item) => {
             const active = pathname === item.to || (item.to !== "/dashboard" && pathname.startsWith(item.to));
@@ -141,7 +148,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </button>
           <div className="hidden md:block">
             <h1 className="text-sm font-medium text-muted-foreground">
-              {user.role === "admin" ? "Admin Workspace" : user.role === "team_leader" ? "Team Leader workspace" : "Employee workspace"}
+              {user.role === "admin" ? "Admin Workspace" : user.role === "project_manager" ? "Project Manager workspace" : isLeaderRole ? "Team Leader workspace" : "Employee workspace"}
             </h1>
           </div>
           <div className="text-sm text-muted-foreground">

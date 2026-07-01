@@ -1,6 +1,6 @@
 import { GetReportRequest, Report, ReportResponse } from "@/types/reports"
 
-const baseUrl = "http://localhost:5078/"
+const baseUrl = "http://localhost:3000/"
 
 const getReport = async (data: GetReportRequest): Promise<Report | null> => {
     const response = await fetch(`${baseUrl}api/report`, {
@@ -45,11 +45,29 @@ const getReports = async (): Promise<Report[]> => {
 
     const data = await response.json();
 
-    // console.log(JSON.stringify(data, null, 2))
     return data
 }
+const updateReportStatus = async (reportId: string, data: {
+    status: string
+    feedback?: string
+    verifiedAt?: string
+    rejectedAt?: string
+    forwardedAt?: string
+    sentAt?: string
+}) => {
+    const response = await fetch(`${baseUrl}api/report/${reportId}/status`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    if (!response.ok) return null
+    return response.status
+}
+
 export {
     getReports,
     getReport,
-    saveReport
+    saveReport,
+    updateReportStatus
 }

@@ -10,11 +10,21 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (user: LoginRequest) => void
+  login: (user: LoginRequest) => Promise<void>
   logout: () => void
 }
 
 const AuthContext = createContext<AuthState | null>(null);
+
+function toUser(r: UserResponse): User {
+  return {
+    id: r.userId,
+    name: r.name ?? "No name",
+    email: r.email,
+    role: r.role,
+    isProjectLeader: r.isProjectLeader,
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -23,14 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const userData: UserResponse = await me()
-
-        setUser({
-          id: userData.userId,
-          name: userData.name ?? "No name",
-          email: userData.email,
-          role: userData.role
-        })
+        setUser(toUser(await me()))
       } catch {
         setUser(null)
       } finally {
@@ -41,18 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (request: LoginRequest) => {
-
     const response = await authService.login(request)
     if (!response) throw new Error("Login failed")
-
-    const userData: UserResponse = await me()
-
-    setUser({
-      id: userData.userId,
-      name: userData.name ?? "No name",
-      email: userData.email,
-      role: userData.role
-    })
+    setUser(toUser(await me()))
   }, []);
 
   const logout = useCallback(async () => {

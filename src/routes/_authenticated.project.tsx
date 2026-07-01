@@ -1,17 +1,26 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useState, type SubmitEvent } from "react";
-import { FolderCog } from "lucide-react";
+import { FolderCog, UserMinus, UserPlus, Users } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CreateProjectRequest } from "@/types/requests/ProjectRequest";
-import { createProject, getAllProjects } from "@/services/projectService";
+import { createProject, assignLeader, removeLeader } from "@/services/projectService";
 import { ProjectResponse } from "@/types/responses/ProjectResponse";
+import { useProjects } from "@/hooks/useProjects";
+import { useUsers } from "@/hooks/useUsers";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/project")({
@@ -25,65 +34,81 @@ const schema = z.object({
 })
   .refine(
     data => !data.endDate || new Date(data.endDate) >= new Date(data.startDate),
-    {
-      message: "End date must be after start date",
-      path: ["endDate"]
-    }
+    { message: "End date must be after start date", path: ["endDate"] }
   );
 
 function ProjectPage() {
   const { user } = useAuth();
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const canAccess = user?.role === "admin" || user?.role === "team_leader" || user?.role === "project_manager";
   if (!canAccess) return <Navigate to="/dashboard" />;
 
+  const canManage = user?.role === "admin" || user?.role === "project_manager";
+
   const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState<CreateProjectRequest>({ name: "", description: "", startDate: new Date(), endDate: new Date() });
+  const [selectedLeader, setSelectedLeader] = useState<Record<string, string>>({});
 
-  const [form, setForm] = useState<CreateProjectRequest>({ name: "", description: "", startDate: new Date(), endDate: new Date() })
+  const { data: allProjects = [], isLoading } = useProjects();
+  const { data: allUsers = [] } = useUsers();
+  const assignableUsers = allUsers.filter((u) => u.role !== "admin");
 
-  const { data: allProjects = [], isLoading } = useQuery({
-    queryKey: ['projects'],
-    queryFn: getAllProjects
-  })
+  const today = new Date().toISOString().split("T")[0];
 
-  const today = new Date().toISOString().split("T")[0]
+  const { mutate: doAssign } = useMutation({
+    mutationFn: ({ projectId, leaderId }: { projectId: string; leaderId: string }) =>
+      assignLeader(projectId, leaderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Team leader assigned");
+    },
+    onError: () => toast.error("Failed to assign team leader"),
+  });
+
+  const { mutate: doRemove } = useMutation({
+    mutationFn: ({ projectId, leaderId }: { projectId: string; leaderId: string }) =>
+      removeLeader(projectId, leaderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Team leader removed");
+    },
+    onError: () => toast.error("Failed to remove team leader"),
+  });
 
   const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault();
-    const parsed = schema.safeParse(form)
+    const parsed = schema.safeParse(form);
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-
     setSubmitting(true);
     try {
-      const response = await createProject(form)
-      if (!response)
-        toast.error(`Failed to create project`)
-
+      const response = await createProject(form);
+      if (!response) {
+        toast.error("Failed to create project");
+        return;
+      }
+      toast.success(`Project ${form.name} created successfully!`);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setForm({ name: "", description: "", startDate: new Date(), endDate: new Date() });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create project");
     } finally {
-      toast.success(`Project ${form.name} created successfully!`)
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
       setSubmitting(false);
-      setForm({ name: "", description: "", startDate: new Date(), endDate: new Date() })
     }
   };
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-          <p className="text-sm text-muted-foreground">
-            Create or manage projects.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
+        <p className="text-sm text-muted-foreground">Create and manage projects and their team leaders.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        {(user?.role === "admin" || user?.role === "project_manager") && (
+        {canManage && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -105,7 +130,7 @@ function ProjectPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="team">Start date</Label>
+                  <Label htmlFor="startDate">Start date</Label>
                   <Input
                     id="startDate"
                     type="date"
@@ -135,7 +160,6 @@ function ProjectPage() {
                     autoComplete="off"
                   />
                 </div>
-
                 <div className="sm:col-span-2">
                   <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                     {submitting ? "Creating..." : "Create project"}
@@ -146,38 +170,101 @@ function ProjectPage() {
           </Card>
         )}
 
-        <Card>
+        <Card className={canManage ? "" : "lg:col-span-2"}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <FolderCog className="h-4 w-4" /> Projects
+              <FolderCog className="h-4 w-4" /> All projects
             </CardTitle>
-            <CardDescription className="flex justify-between px-3 border-b pb-2">
-              <div>
-                All projects.
-              </div>
-              <div>
-                Start date.
-              </div>
-            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {isLoading ? (
               <Skeleton />
+            ) : allProjects.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No projects yet.</p>
             ) : (
-              allProjects.map((u: ProjectResponse) => (
-                <div
-                  key={u.id}
-                  className="flex items-center justify-between rounded-lg border bg-card px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{u.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{u.description}</p>
+              allProjects.map((project: ProjectResponse) => {
+                const assignedIds = new Set(project.teamLeaders?.map((tl) => tl.leader.id) ?? []);
+                const available = assignableUsers.filter((l) => !assignedIds.has(l.userId ?? ""));
+                return (
+                  <div key={project.id} className="rounded-lg border bg-card p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium">{project.name}</p>
+                        {project.description && (
+                          <p className="text-xs text-muted-foreground truncate">{project.description}</p>
+                        )}
+                      </div>
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {new Date(project.startDate).toISOString().split("T")[0]}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <Users className="h-3 w-3" /> Team leaders
+                      </p>
+                      {(project.teamLeaders?.length ?? 0) === 0 ? (
+                        <p className="text-xs text-muted-foreground italic">No leaders assigned</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {project.teamLeaders?.map((tl) => (
+                            <span
+                              key={tl.leader.id}
+                              className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs font-medium"
+                            >
+                              {tl.leader.name}
+                              {canManage && (
+                                <button
+                                  onClick={() => doRemove({ projectId: project.id, leaderId: tl.leader.id })}
+                                  className="ml-0.5 rounded-full text-muted-foreground hover:text-destructive"
+                                  aria-label={`Remove ${tl.leader.name}`}
+                                >
+                                  <UserMinus className="h-3 w-3" />
+                                </button>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {canManage && available.length > 0 && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <Select
+                            value={selectedLeader[project.id] ?? ""}
+                            onValueChange={(v) => setSelectedLeader((prev) => ({ ...prev, [project.id]: v }))}
+                          >
+                            <SelectTrigger className="h-7 text-xs">
+                              <SelectValue placeholder="Add team leader..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {available.map((l) => (
+                                <SelectItem key={l.userId} value={l.userId ?? ""}>
+                                  {l.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            disabled={!selectedLeader[project.id]}
+                            onClick={() => {
+                              const leaderId = selectedLeader[project.id];
+                              if (!leaderId) return;
+                              doAssign({ projectId: project.id, leaderId });
+                              setSelectedLeader((prev) => ({ ...prev, [project.id]: "" }));
+                            }}
+                          >
+                            <UserPlus className="mr-1 h-3 w-3" /> Assign
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    {new Date(u.startDate).toISOString().split("T")[0]}
-                  </span>
-                </div>
-              )))}
+                );
+              })
+            )}
           </CardContent>
         </Card>
       </div>

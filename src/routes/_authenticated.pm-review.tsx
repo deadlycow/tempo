@@ -1,6 +1,6 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Forward } from "lucide-react";
+import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { formatDate, formatWeekRange, totalHours } from "@/lib/format";
@@ -21,13 +21,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Status } from "@/Enum/Status";
 import * as reportService from "@/services/reportService";
 
-export const Route = createFileRoute("/_authenticated/sent")({
-  component: SentPage,
+export const Route = createFileRoute("/_authenticated/pm-review")({
+  component: PmReviewPage,
 });
 
-function SentPage() {
+function PmReviewPage() {
   const { user } = useAuth();
-  const canAccess = user?.role === "team_leader" || user?.role === "admin" || (user?.role === "employee" && !!user?.isProjectLeader);
+  const canAccess = user?.role === "project_manager" || user?.role === "admin";
   if (!canAccess) return <Navigate to="/dashboard" />;
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -37,23 +37,23 @@ function SentPage() {
   const { data: users = [] } = useUsers();
 
   const queryClient = useQueryClient();
-  const { mutate: forwardReports } = useMutation({
+  const { mutate: sendToPayroll } = useMutation({
     mutationFn: async (ids: string[]) => {
       const now = new Date().toISOString();
       await Promise.all(
         ids.map((id) =>
-          reportService.updateReportStatus(id, { status: Status.forwarded, forwardedAt: now })
+          reportService.updateReportStatus(id, { status: Status.sent, sentAt: now })
         )
       );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reports"] }),
   });
 
-  const verified = useMemo(
+  const forwarded = useMemo(
     () =>
       reports
-        .filter((r) => r.status === Status.verified)
-        .sort((a, b) => (b.verifiedAt ?? "").localeCompare(a.verifiedAt ?? "")),
+        .filter((r) => r.status === Status.forwarded)
+        .sort((a, b) => (b.forwardedAt ?? "").localeCompare(a.forwardedAt ?? "")),
     [reports]
   );
 
@@ -67,19 +67,19 @@ function SentPage() {
   };
 
   const toggleAll = () => {
-    if (selected.size === verified.length) setSelected(new Set());
-    else setSelected(new Set(verified.map((r) => r.id ?? "")));
+    if (selected.size === forwarded.length) setSelected(new Set());
+    else setSelected(new Set(forwarded.map((r) => r.id ?? "")));
   };
 
-  const totalSelectedHours = verified
+  const totalSelectedHours = forwarded
     .filter((r) => selected.has(r.id ?? ""))
     .reduce((s, r) => s + totalHours(r.timeEntries), 0);
 
-  const handleForward = () => {
+  const handleSend = () => {
     const ids = Array.from(selected);
-    forwardReports(ids, {
+    sendToPayroll(ids, {
       onSuccess: () => {
-        toast.success(`${ids.length} report${ids.length === 1 ? "" : "s"} forwarded to project manager`);
+        toast.success(`${ids.length} report${ids.length === 1 ? "" : "s"} sent for payroll`);
         setSelected(new Set());
         setConfirmOpen(false);
       },
@@ -90,13 +90,13 @@ function SentPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Forward verified reports</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Review forwarded reports</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Forward verified reports to the project manager for payroll approval.
+            Send approved reports to payroll. {forwarded.length} report{forwarded.length === 1 ? "" : "s"} awaiting.
           </p>
         </div>
         <Button disabled={selected.size === 0} onClick={() => setConfirmOpen(true)}>
-          <Forward className="mr-2 h-4 w-4" /> Forward {selected.size > 0 ? `(${selected.size})` : ""}
+          <Send className="mr-2 h-4 w-4" /> Send to payroll {selected.size > 0 ? `(${selected.size})` : ""}
         </Button>
       </div>
 
@@ -107,7 +107,7 @@ function SentPage() {
               <tr>
                 <th className="w-10 px-6 py-3">
                   <Checkbox
-                    checked={verified.length > 0 && selected.size === verified.length}
+                    checked={forwarded.length > 0 && selected.size === forwarded.length}
                     onCheckedChange={toggleAll}
                     aria-label="Select all"
                   />
@@ -115,19 +115,19 @@ function SentPage() {
                 <th className="px-6 py-3 font-medium">Employee</th>
                 <th className="px-6 py-3 font-medium">Week</th>
                 <th className="px-6 py-3 font-medium">Hours</th>
-                <th className="px-6 py-3 font-medium">Verified</th>
+                <th className="px-6 py-3 font-medium">Forwarded</th>
                 <th className="px-6 py-3 font-medium">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {verified.length === 0 && (
+              {forwarded.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                    No verified reports waiting to be forwarded.
+                    No reports forwarded by team leaders yet.
                   </td>
                 </tr>
               )}
-              {verified.map((r) => {
+              {forwarded.map((r) => {
                 const u = users.find((u) => u.userId === r.userId);
                 const checked = selected.has(r.id ?? "");
                 return (
@@ -145,7 +145,7 @@ function SentPage() {
                     </td>
                     <td className="px-6 py-3">{formatWeekRange(r.weekStart)}</td>
                     <td className="px-6 py-3 font-medium">{totalHours(r.timeEntries)}h</td>
-                    <td className="px-6 py-3 text-muted-foreground">{r.verifiedAt ? formatDate(r.verifiedAt) : "—"}</td>
+                    <td className="px-6 py-3 text-muted-foreground">{r.forwardedAt ? formatDate(r.forwardedAt) : "—"}</td>
                     <td className="px-6 py-3"><StatusBadge status={r.status ?? Status.noStatus} /></td>
                   </tr>
                 );
@@ -158,15 +158,15 @@ function SentPage() {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Forward {selected.size} report{selected.size === 1 ? "" : "s"}?</DialogTitle>
+            <DialogTitle>Send {selected.size} report{selected.size === 1 ? "" : "s"} to payroll?</DialogTitle>
             <DialogDescription>
-              {totalSelectedHours}h will be forwarded to the project manager for payroll approval.
+              {totalSelectedHours}h will be submitted for payroll processing. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-            <Button onClick={handleForward}>
-              <Forward className="mr-2 h-4 w-4" /> Confirm forward
+            <Button onClick={handleSend}>
+              <Send className="mr-2 h-4 w-4" /> Confirm send
             </Button>
           </DialogFooter>
         </DialogContent>

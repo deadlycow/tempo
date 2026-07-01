@@ -27,7 +27,7 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      login(user);
+      await login(user);
       toast.success("Welcome back");
       navigate({ to: "/dashboard" });
     } catch (err) {

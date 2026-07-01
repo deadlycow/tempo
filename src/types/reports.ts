@@ -13,6 +13,7 @@ interface Report {
   submittedAt?: string
   verifiedAt?: string
   rejectedAt?: string
+  forwardedAt?: string
   sentAt?: string
   feedback?: string
   reviewedBy?: string
@@ -25,6 +26,7 @@ interface ReportResponse {
   submittedAt?: string
   verifiedAt?: string
   rejectedAt?: string
+  forwardedAt?: string
   sentAt?: string
   feedback?: string
   reviewedBy?: string

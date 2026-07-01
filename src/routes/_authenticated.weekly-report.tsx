@@ -2,9 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Save, Send, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/lib/auth";
-import { addDays, getWeekStart, isoDate } from "@/lib/format";
-import { dayLabel, formatShortDate, formatWeekRange, totalHours } from "@/lib/format";
+import { addDays, dayLabel, formatShortDate, formatWeekRange, getWeekStart, isoDate, totalHours } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,7 +21,6 @@ export const Route = createFileRoute("/_authenticated/weekly-report")({
 });
 
 function WeeklyReportPage() {
-  // const { user } = useAuth();
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
 
@@ -76,7 +73,7 @@ function WeeklyReportPage() {
         timeEntries: [
           ...prev.timeEntries,
           {
-            id: "", projectId: "", date: weekStart, hoursWorked: 0, description: ""
+            id: crypto.randomUUID(), projectId: "", date: weekStart, hoursWorked: 0, description: ""
           }]
       }
     }
@@ -95,8 +92,7 @@ function WeeklyReportPage() {
   }
 
   const validate = (): string | null => {
-    if (!currentReport?.timeEntries) return "empty"
-    if (currentReport?.timeEntries.length === 0) return "Add at least one time entry.";
+    if (!currentReport?.timeEntries || currentReport.timeEntries.length === 0) return "Add at least one time entry.";
     for (const e of currentReport?.timeEntries) {
       if (!e.projectId) return "Every entry needs a project.";
       if (!e.hoursWorked || e.hoursWorked <= 0) return "Hours must be greater than zero.";
@@ -134,14 +130,14 @@ function WeeklyReportPage() {
 
     await reportService.saveReport({
       ...basePayload,
-      status: Status.sent
+      status: Status.submitted
     })
 
     toast.success("Report submitted for verification");
     navigate({ to: "/history" });
   };
 
-  const total = totalHours(report?.timeEntries ?? []);
+  const total = totalHours(currentReport?.timeEntries ?? []);
   const days = Array.from({ length: 7 }, (_, i) => isoDate(addDays(weekStart, i)));
 
   return (

@@ -5,6 +5,7 @@ import {
   Clock,
   FileEdit,
   FileText,
+  FolderCog,
   Inbox,
   Send,
   TrendingUp,
@@ -28,7 +29,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function DashboardPage() {
   const { user } = useAuth();
   if (!user) return null;
-  return user.role === "team_leader" ? <LeaderDashboard /> : <EmployeeDashboard />;
+  if (user.role === "team_leader" || user.role === "admin") return <LeaderDashboard />;
+  if (user.role === "project_manager") return <ProjectManagerDashboard />;
+  return <EmployeeDashboard />;
 }
 
 function EmployeeDashboard() {
@@ -212,6 +215,73 @@ function LeaderDashboard() {
             })}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ProjectManagerDashboard() {
+  const { data: reports = [] } = useReports();
+  const { data: projects = [] } = useProjects();
+  const { data: users = [] } = useUsers();
+
+  const projectHours = new Map<string, number>();
+  reports.forEach((r) => {
+    r.timeEntries.forEach((e) => {
+      projectHours.set(e.projectId, (projectHours.get(e.projectId) ?? 0) + e.hoursWorked);
+    });
+  });
+
+  const totalHoursAll = Array.from(projectHours.values()).reduce((s, h) => s + h, 0);
+  const projectList = projects
+    .map((p) => ({ ...p, hours: projectHours.get(p.id) ?? 0 }))
+    .sort((a, b) => b.hours - a.hours);
+  const maxHours = Math.max(...projectList.map((p) => p.hours), 1);
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Project overview</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Monitor hours logged across all projects.</p>
+        </div>
+        <Link to="/project">
+          <Button>
+            <FolderCog className="mr-2 h-4 w-4" /> Manage projects
+          </Button>
+        </Link>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Active projects" value={projects.length} icon={FolderCog} tone="primary" />
+        <StatCard label="Total hours logged" value={totalHoursAll} icon={Clock} tone="info" />
+        <StatCard label="Team members" value={users.length} icon={Users} tone="default" />
+      </div>
+
+      <div className="rounded-xl border bg-card shadow-soft">
+        <div className="border-b px-6 py-4">
+          <h2 className="text-base font-semibold">Hours by project</h2>
+        </div>
+        {projectList.length === 0 ? (
+          <EmptyState message="No projects yet." />
+        ) : (
+          <div className="divide-y">
+            {projectList.map((p) => (
+              <div key={p.id} className="px-6 py-4">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="font-medium">{p.name}</span>
+                  <span className="text-muted-foreground">{p.hours}h</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${(p.hours / maxHours) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

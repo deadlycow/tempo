@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, Forward, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { formatDate, formatShortDate, formatWeekRange, totalHours } from "@/lib/format";
@@ -22,7 +22,6 @@ import { useProjects } from "@/hooks/useProjects";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Status } from "@/Enum/Status";
 import * as reportService from "@/services/reportService";
-import type { Report } from "@/types/reports";
 
 export const Route = createFileRoute("/_authenticated/pending")({
   component: PendingPage,
@@ -39,50 +38,48 @@ function PendingPage() {
   const { data: projects = [] } = useProjects();
 
   const queryClient = useQueryClient();
-  const { mutate: updateStatus } = useMutation({
-    mutationFn: (report: Report) => reportService.saveReport(report),
+  const { mutate: changeStatus } = useMutation({
+    mutationFn: (args: Parameters<typeof reportService.updateReportStatus>) =>
+      reportService.updateReportStatus(...args),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reports"] }),
   });
 
-  const employees = users.filter((u) => u.role === "employee");
+  const canAccess = user!.role === "team_leader" || user!.role === "admin" || (user!.role === "employee" && !!user!.isProjectLeader);
+  if (!canAccess) return <Navigate to="/dashboard" />;
+
   const pending = useMemo(
     () =>
       reports
-        .filter((r) => r.status === Status.submitted && employees.some((e) => e.userId === r.userId))
+        .filter((r) => r.status === Status.submitted)
         .sort((a, b) => (b.submittedAt ?? "").localeCompare(a.submittedAt ?? "")),
-    [reports, employees]
+    [reports]
   );
 
-  if (user!.role !== "team_leader") {
-    return <p className="text-sm text-muted-foreground">This page is only available to team leaders.</p>;
-  }
-
   const handleVerify = (id: string) => {
-    const report = reports.find((r) => r.id === id);
-    if (!report) return;
     const now = new Date().toISOString();
-    updateStatus(
-      { ...report, status: Status.verified, verifiedAt: now, reviewedBy: user!.id },
-      { onSuccess: () => toast.success("Report verified") }
-    );
+    changeStatus([id, { status: Status.verified, verifiedAt: now }], {
+      onSuccess: () => toast.success("Report verified"),
+    });
   };
 
   const handleReject = () => {
     if (!rejectId) return;
     if (!feedback.trim()) return toast.error("Please provide feedback");
-    const report = reports.find((r) => r.id === rejectId);
-    if (!report) return;
     const now = new Date().toISOString();
-    updateStatus(
-      { ...report, status: Status.rejected, rejectedAt: now, feedback, reviewedBy: user!.id },
-      {
-        onSuccess: () => {
-          toast.success("Report rejected with feedback");
-          setRejectId(null);
-          setFeedback("");
-        },
-      }
-    );
+    changeStatus([rejectId, { status: Status.rejected, rejectedAt: now, feedback }], {
+      onSuccess: () => {
+        toast.success("Report rejected with feedback");
+        setRejectId(null);
+        setFeedback("");
+      },
+    });
+  };
+
+  const handleForward = (id: string) => {
+    const now = new Date().toISOString();
+    changeStatus([id, { status: Status.forwarded, forwardedAt: now }], {
+      onSuccess: () => toast.success("Report forwarded to project manager"),
+    });
   };
 
   return (
@@ -90,7 +87,7 @@ function PendingPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Pending verification</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Review submitted reports from your team. {pending.length} report{pending.length === 1 ? "" : "s"} awaiting.
+          Review submitted reports. {pending.length} report{pending.length === 1 ? "" : "s"} awaiting.
         </p>
       </div>
 
@@ -157,8 +154,11 @@ function PendingPage() {
                     <Button variant="outline" onClick={() => setRejectId(r.id ?? null)}>
                       <XCircle className="mr-2 h-4 w-4" /> Reject
                     </Button>
-                    <Button onClick={() => handleVerify(r.id ?? "")}>
+                    <Button variant="outline" onClick={() => handleVerify(r.id ?? "")}>
                       <CheckCircle2 className="mr-2 h-4 w-4" /> Verify
+                    </Button>
+                    <Button onClick={() => handleForward(r.id ?? "")}>
+                      <Forward className="mr-2 h-4 w-4" /> Forward to PM
                     </Button>
                   </div>
                 </div>

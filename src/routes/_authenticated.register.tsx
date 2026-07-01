@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { RegisterRequest } from "@/types/requests/AuthRequest";
-import { registerUser, getAllUsers } from "@/services/userService";
+import { registerUser } from "@/services/userService";
 import { UserResponse } from "@/types/responses/UserResponse";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useUsers } from "@/hooks/useUsers";
 
 export const Route = createFileRoute("/_authenticated/register")({
   component: RegisterPage,
@@ -57,17 +58,14 @@ function RegisterPage() {
 
   const [form, setForm] = useState<RegisterRequest>({ name: "", email: "", password: "", role: "" })
 
-  const { data: apiUsers = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: getAllUsers
-  })
+  const { data: apiUsers = [] } = useUsers()
 
   const request = {
     ...form,
     password: "Bytmig123!"
   }
 
-  const handleSubmit = (e: SubmitEvent) => {
+  const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault();
     const parsed = schema.safeParse(form)
     if (!parsed.success) {
@@ -84,14 +82,18 @@ function RegisterPage() {
     }
     setSubmitting(true);
     try {
-      const response = registerUser(request)
-      if (!response)
+      const response = await registerUser(request)
+      if (!response) {
         toast.error(`Failed to register ${form.name}`)
-    } finally {
+        return
+      }
       toast.success(`${form.name} registered successfully!`)
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      setSubmitting(false);
       setForm({ name: "", email: "", password: "", role: "" })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Registration failed")
+    } finally {
+      setSubmitting(false);
     }
   };
 

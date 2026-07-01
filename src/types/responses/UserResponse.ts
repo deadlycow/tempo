@@ -5,6 +5,7 @@ interface UserResponse {
   userId?: string,
   name?: string,
   role: Role,
+  isProjectLeader?: boolean,
 }
 export {
   UserResponse

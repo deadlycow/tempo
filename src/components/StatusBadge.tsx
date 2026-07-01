@@ -1,14 +1,15 @@
 import { Status } from "@/Enum/Status";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Clock, FileText, Send, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Forward, Send, XCircle } from "lucide-react";
 
 const config: Record<Status, { label: string; cls: string; Icon: typeof Clock }> = {
   [Status.draft]: { label: "Draft", cls: "bg-muted text-muted-foreground border-border", Icon: FileText },
   [Status.submitted]: { label: "Submitted", cls: "bg-info/10 text-info border-info/30", Icon: Clock },
   [Status.verified]: { label: "Verified", cls: "bg-success/10 text-success border-success/30", Icon: CheckCircle2 },
   [Status.rejected]: { label: "Rejected", cls: "bg-destructive/10 text-destructive border-destructive/30", Icon: XCircle },
+  [Status.forwarded]: { label: "Forwarded", cls: "bg-warning/10 text-warning border-warning/30", Icon: Forward },
   [Status.sent]: { label: "Sent", cls: "bg-primary/10 text-primary border-primary/30", Icon: Send },
-  [Status.noStatus]: { label: "No Status", cls: "bg-primary/10 text-primary border-primary/30", Icon: Send },
+  [Status.noStatus]: { label: "No Status", cls: "bg-muted text-muted-foreground border-border", Icon: FileText },
 };
 
 export function StatusBadge({ status, className }: { status: Status; className?: string }) {

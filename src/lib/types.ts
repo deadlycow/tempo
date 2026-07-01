@@ -7,15 +7,9 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  isProjectLeader?: boolean;
   avatar?: string;
   team?: string;
-}
-
-export interface Project {
-  id: string;
-  name: string;
-  client: string;
-  color: string;
 }
 
 export interface TimeEntry {
