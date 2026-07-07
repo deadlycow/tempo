@@ -3,8 +3,7 @@ import { useMemo, useState, type SubmitEvent } from "react";
 import { UserPlus, ShieldAlert, Users, Mail } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
-import { useData } from "@/lib/data-store";
-import type { Role, User } from "@/lib/types";
+import type { Role } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +17,10 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { RegisterRequest } from "@/types/requests/AuthRequest";
-import { registerUser, getAllUsers } from "@/services/userService";
+import { registerUser } from "@/services/userService";
 import { UserResponse } from "@/types/responses/UserResponse";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useUsers } from "@/hooks/useUsers";
 
 export const Route = createFileRoute("/_authenticated/register")({
   component: RegisterPage,
@@ -35,7 +35,6 @@ const schema = z.object({
 
 function RegisterPage() {
   const { user } = useAuth();
-  const { users, addUser } = useData();
   const queryClient = useQueryClient()
 
   const canAccess = user?.role === "admin" || user?.role === "team_leader";
@@ -59,50 +58,46 @@ function RegisterPage() {
 
   const [form, setForm] = useState<RegisterRequest>({ name: "", email: "", password: "", role: "" })
 
-  const { data: apiUsers = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: getAllUsers
-  })
+  const { data: apiUsers = [] } = useUsers()
 
-  //For now 
   const request = {
     ...form,
     password: "Bytmig123!"
   }
 
-  const handleSubmit = (e: SubmitEvent) => {
+  const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault();
     const parsed = schema.safeParse(form)
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    // Server-side style guard: a team leader can never create another team leader.
     if (user?.role === "team_leader" && parsed.data.role !== "employee") {
       toast.error("Team leaders can only create employee accounts");
       return;
     }
-    if (users.some((u) => u.email.toLowerCase() === parsed.data.email)) {
+    if (apiUsers.some((u) => u.email.toLowerCase() === parsed.data.email)) {
       toast.error("An account with that email already exists");
       return;
     }
     setSubmitting(true);
     try {
-      // const created = addUser(parsed.data);
-
-      const response = registerUser(request)
-      if (!response)
+      const response = await registerUser(request)
+      if (!response) {
         toast.error(`Failed to register ${form.name}`)
-      // toast.success(`${created.name} added as ${roleLabel(created.role)}`);
-    } finally {
+        return
+      }
       toast.success(`${form.name} registered successfully!`)
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      setSubmitting(false);
       setForm({ name: "", email: "", password: "", role: "" })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Registration failed")
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const recent = users.slice(-5).reverse();
+  const recent = apiUsers.slice(-5).reverse();
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -232,7 +227,7 @@ function RegisterPage() {
           <CardContent className="space-y-2">
             {recent.map((u) => (
               <div
-                key={u.id}
+                key={u.userId ?? u.email}
                 className="flex items-center justify-between rounded-lg border bg-card px-3 py-2"
               >
                 <div className="min-w-0">
@@ -254,7 +249,6 @@ function RegisterPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {/* {isLoading && ( <)} */}
             {apiUsers.map((u: UserResponse, index) => (
               <div
                 key={index}

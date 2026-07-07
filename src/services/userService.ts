@@ -1,7 +1,7 @@
 import type { UserResponse } from '@/types/responses/UserResponse'
 import type { RegisterRequest } from '@/types/requests/AuthRequest'
 
-const baseUrl = "http://localhost:5078/"
+const baseUrl = "http://localhost:3000/"
 
 const me = async (): Promise<UserResponse> => {
     const response = await fetch(`${baseUrl}api/users/me`, {

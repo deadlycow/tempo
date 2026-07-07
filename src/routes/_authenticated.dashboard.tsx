@@ -5,6 +5,7 @@ import {
   Clock,
   FileEdit,
   FileText,
+  FolderCog,
   Inbox,
   Send,
   TrendingUp,
@@ -12,7 +13,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useData } from "@/lib/data-store";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { formatWeekRange, totalHours } from "@/lib/format";
 import { useReports } from "@/hooks/useReports";
 import { Status } from "@/Enum/Status";
 import { useProjects } from "@/hooks/useProjects";
+import { useUsers } from "@/hooks/useUsers";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -28,27 +29,24 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function DashboardPage() {
   const { user } = useAuth();
   if (!user) return null;
-  return user.role === "team_leader" ? <LeaderDashboard /> : <EmployeeDashboard />;
+  if (user.role === "team_leader" || user.role === "admin") return <LeaderDashboard />;
+  if (user.role === "project_manager") return <ProjectManagerDashboard />;
+  return <EmployeeDashboard />;
 }
 
 function EmployeeDashboard() {
   const { user } = useAuth();
-  const { reports, getProjectById } = useData();
+  const { data: reports = [] } = useReports();
+  const { data: projects = [] } = useProjects();
 
-  const { data: report = [] } = useReports()
-  const { data: projects = [] } = useProjects()
-
-  // const mine = useMemo(() => reports.filter((r) => r.userId === user!.id), [reports, user]);
-  const mine = report
-  // console.log(JSON.stringify(timeEntries, null, 2))
   const counts = {
-    submitted: mine?.filter((r) => r.status === Status.submitted.toLowerCase()).length ?? 0,
-    verified: mine?.filter((r) => r.status === Status.verified.toLowerCase() || r.status === Status.sent.toLowerCase()).length ?? 0,
-    rejected: mine?.filter((r) => r.status === Status.rejected.toLowerCase()).length ?? 0,
-    draft: mine?.filter((r) => r.status === Status.draft.toLowerCase()).length ?? 0,
+    submitted: reports.filter((r) => r.status === Status.submitted).length,
+    verified: reports.filter((r) => r.status === Status.verified || r.status === Status.sent).length,
+    rejected: reports.filter((r) => r.status === Status.rejected).length,
+    draft: reports.filter((r) => r.status === Status.draft).length,
   };
 
-  const recent = [...mine]
+  const recent = [...reports]
     .sort((a, b) => b.weekStart.localeCompare(a.weekStart))
     .slice(0, 5);
 
@@ -89,7 +87,7 @@ function EmployeeDashboard() {
                 <div className="min-w-0">
                   <p className="font-medium">{formatWeekRange(r.weekStart)}</p>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {Array.from(new Set(r.timeEntries.map((e) => getProjectById(e.projectId)?.name).filter(Boolean))).join(" · ")}
+                    {Array.from(new Set(r.timeEntries.map((e) => projects.find((p) => p.id === e.projectId)?.name).filter(Boolean))).join(" · ")}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -107,29 +105,33 @@ function EmployeeDashboard() {
 
 function LeaderDashboard() {
   const { user } = useAuth();
-  const { reports, users, getUserById, getProjectById } = useData();
+  const { data: reports = [] } = useReports();
+  const { data: users = [] } = useUsers();
+  const { data: projects = [] } = useProjects();
 
-  const employees = users.filter((u) => u.role === "employee" && u.team === user!.team);
-  const teamReports = reports.filter((r) => employees.some((e) => e.id === r.userId));
+  const employees = users.filter((u) => u.role === "employee");
+  const teamReports = useMemo(
+    () => reports.filter((r) => employees.some((e) => e.userId === r.userId)),
+    [reports, employees]
+  );
 
   const counts = {
-    pending: teamReports.filter((r) => r.status === "submitted").length,
-    verified: teamReports.filter((r) => r.status === "verified").length,
-    sent: teamReports.filter((r) => r.status === "sent").length,
+    pending: teamReports.filter((r) => r.status === Status.submitted).length,
+    verified: teamReports.filter((r) => r.status === Status.verified).length,
+    sent: teamReports.filter((r) => r.status === Status.sent).length,
     employees: employees.length,
   };
 
-  const totalTeamHours = teamReports.reduce((sum, r) => sum + totalHours(r.entries), 0);
+  const totalTeamHours = teamReports.reduce((sum, r) => sum + totalHours(r.timeEntries), 0);
 
   const pendingList = teamReports
-    .filter((r) => r.status === "submitted")
+    .filter((r) => r.status === Status.submitted)
     .sort((a, b) => (b.submittedAt ?? "").localeCompare(a.submittedAt ?? ""))
     .slice(0, 6);
 
-  // Project breakdown
   const projectHours = new Map<string, number>();
   teamReports.forEach((r) => {
-    r.entries.forEach((e) => {
+    r.timeEntries.forEach((e) => {
       projectHours.set(e.projectId, (projectHours.get(e.projectId) ?? 0) + e.hoursWorked);
     });
   });
@@ -161,16 +163,16 @@ function LeaderDashboard() {
             </Link>
           </div>
           {pendingList.length === 0 ? (
-            <EmptyState message="No reports awaiting review. " />
+            <EmptyState message="No reports awaiting review." />
           ) : (
             <ul className="divide-y">
               {pendingList.map((r) => {
-                const u = getUserById(r.userId);
+                const u = users.find((u) => u.userId === r.userId);
                 return (
                   <li key={r.id} className="flex items-center justify-between gap-4 px-6 py-4">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                        {u?.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                        {(u?.name ?? "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate font-medium">{u?.name}</p>
@@ -178,8 +180,8 @@ function LeaderDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span>{totalHours(r.entries)}h</span>
-                      <StatusBadge status={r.status} />
+                      <span>{totalHours(r.timeEntries)}h</span>
+                      <StatusBadge status={r.status ?? Status.noStatus} />
                     </div>
                   </li>
                 );
@@ -195,7 +197,7 @@ function LeaderDashboard() {
           </div>
           <div className="mt-5 space-y-4">
             {topProjects.map(([pid, h]) => {
-              const p = getProjectById(pid);
+              const p = projects.find((p) => p.id === pid);
               return (
                 <div key={pid}>
                   <div className="mb-1 flex items-center justify-between text-sm">
@@ -213,6 +215,73 @@ function LeaderDashboard() {
             })}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ProjectManagerDashboard() {
+  const { data: reports = [] } = useReports();
+  const { data: projects = [] } = useProjects();
+  const { data: users = [] } = useUsers();
+
+  const projectHours = new Map<string, number>();
+  reports.forEach((r) => {
+    r.timeEntries.forEach((e) => {
+      projectHours.set(e.projectId, (projectHours.get(e.projectId) ?? 0) + e.hoursWorked);
+    });
+  });
+
+  const totalHoursAll = Array.from(projectHours.values()).reduce((s, h) => s + h, 0);
+  const projectList = projects
+    .map((p) => ({ ...p, hours: projectHours.get(p.id) ?? 0 }))
+    .sort((a, b) => b.hours - a.hours);
+  const maxHours = Math.max(...projectList.map((p) => p.hours), 1);
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Project overview</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Monitor hours logged across all projects.</p>
+        </div>
+        <Link to="/project">
+          <Button>
+            <FolderCog className="mr-2 h-4 w-4" /> Manage projects
+          </Button>
+        </Link>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Active projects" value={projects.length} icon={FolderCog} tone="primary" />
+        <StatCard label="Total hours logged" value={totalHoursAll} icon={Clock} tone="info" />
+        <StatCard label="Team members" value={users.length} icon={Users} tone="default" />
+      </div>
+
+      <div className="rounded-xl border bg-card shadow-soft">
+        <div className="border-b px-6 py-4">
+          <h2 className="text-base font-semibold">Hours by project</h2>
+        </div>
+        {projectList.length === 0 ? (
+          <EmptyState message="No projects yet." />
+        ) : (
+          <div className="divide-y">
+            {projectList.map((p) => (
+              <div key={p.id} className="px-6 py-4">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="font-medium">{p.name}</span>
+                  <span className="text-muted-foreground">{p.hours}h</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${(p.hours / maxHours) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

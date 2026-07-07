@@ -16,6 +16,7 @@ import { Route as AuthenticatedWeeklyReportRouteImport } from './routes/_authent
 import { Route as AuthenticatedSentRouteImport } from './routes/_authenticated.sent'
 import { Route as AuthenticatedRegisterRouteImport } from './routes/_authenticated.register'
 import { Route as AuthenticatedProjectRouteImport } from './routes/_authenticated.project'
+import { Route as AuthenticatedPmReviewRouteImport } from './routes/_authenticated.pm-review'
 import { Route as AuthenticatedPendingRouteImport } from './routes/_authenticated.pending'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
@@ -55,6 +56,11 @@ const AuthenticatedProjectRoute = AuthenticatedProjectRouteImport.update({
   path: '/project',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPmReviewRoute = AuthenticatedPmReviewRouteImport.update({
+  id: '/pm-review',
+  path: '/pm-review',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedPendingRoute = AuthenticatedPendingRouteImport.update({
   id: '/pending',
   path: '/pending',
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/pending': typeof AuthenticatedPendingRoute
+  '/pm-review': typeof AuthenticatedPmReviewRoute
   '/project': typeof AuthenticatedProjectRoute
   '/register': typeof AuthenticatedRegisterRoute
   '/sent': typeof AuthenticatedSentRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/pending': typeof AuthenticatedPendingRoute
+  '/pm-review': typeof AuthenticatedPmReviewRoute
   '/project': typeof AuthenticatedProjectRoute
   '/register': typeof AuthenticatedRegisterRoute
   '/sent': typeof AuthenticatedSentRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/pending': typeof AuthenticatedPendingRoute
+  '/_authenticated/pm-review': typeof AuthenticatedPmReviewRoute
   '/_authenticated/project': typeof AuthenticatedProjectRoute
   '/_authenticated/register': typeof AuthenticatedRegisterRoute
   '/_authenticated/sent': typeof AuthenticatedSentRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/pending'
+    | '/pm-review'
     | '/project'
     | '/register'
     | '/sent'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/pending'
+    | '/pm-review'
     | '/project'
     | '/register'
     | '/sent'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/history'
     | '/_authenticated/pending'
+    | '/_authenticated/pm-review'
     | '/_authenticated/project'
     | '/_authenticated/register'
     | '/_authenticated/sent'
@@ -200,6 +212,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/pm-review': {
+      id: '/_authenticated/pm-review'
+      path: '/pm-review'
+      fullPath: '/pm-review'
+      preLoaderRoute: typeof AuthenticatedPmReviewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/pending': {
       id: '/_authenticated/pending'
       path: '/pending'
@@ -228,6 +247,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedPendingRoute: typeof AuthenticatedPendingRoute
+  AuthenticatedPmReviewRoute: typeof AuthenticatedPmReviewRoute
   AuthenticatedProjectRoute: typeof AuthenticatedProjectRoute
   AuthenticatedRegisterRoute: typeof AuthenticatedRegisterRoute
   AuthenticatedSentRoute: typeof AuthenticatedSentRoute
@@ -238,6 +258,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedPendingRoute: AuthenticatedPendingRoute,
+  AuthenticatedPmReviewRoute: AuthenticatedPmReviewRoute,
   AuthenticatedProjectRoute: AuthenticatedProjectRoute,
   AuthenticatedRegisterRoute: AuthenticatedRegisterRoute,
   AuthenticatedSentRoute: AuthenticatedSentRoute,

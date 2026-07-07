@@ -1,6 +1,6 @@
 import type { LoginRequest } from '@/types/requests/AuthRequest'
 
-const baseUrl = "http://localhost:5078/"
+const baseUrl = "http://localhost:3000/"
 
 const login = async (data: LoginRequest): Promise<boolean> => {
   const response = await fetch(`${baseUrl}api/auth/login`, {
