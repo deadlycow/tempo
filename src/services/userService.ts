@@ -1,5 +1,6 @@
 import type { UserResponse } from '@/types/responses/UserResponse'
 import type { RegisterRequest } from '@/types/requests/AuthRequest'
+import type { Role } from '@/lib/types'
 
 const baseUrl = "http://localhost:3000/"
 
@@ -43,8 +44,23 @@ const getAllUsers = async () : Promise<UserResponse[]> => {
     return await response.json()
 }
 
+const updateUserRole = async (userId: string, role: Role): Promise<UserResponse> => {
+    const response = await fetch(`${baseUrl}api/users/${userId}/role`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role })
+    })
+    if (!response.ok)
+        throw new Error('Failed to update role')
+    return response.json()
+}
+
 export {
     me,
     registerUser,
-    getAllUsers
+    getAllUsers,
+    updateUserRole
 }

@@ -1,5 +1,7 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, type SubmitEvent } from "react";
+import { RequireRole } from "@/components/RequireRole";
+import { canManageProjects } from "@/lib/permissions";
 import { FolderCog, UserMinus, UserPlus, Users } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
@@ -38,13 +40,18 @@ const schema = z.object({
   );
 
 function ProjectPage() {
+  return (
+    <RequireRole roles={["admin", "team_leader", "project_manager"]}>
+      <ProjectPageContent />
+    </RequireRole>
+  );
+}
+
+function ProjectPageContent() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const canAccess = user?.role === "admin" || user?.role === "team_leader" || user?.role === "project_manager";
-  if (!canAccess) return <Navigate to="/dashboard" />;
-
-  const canManage = user?.role === "admin" || user?.role === "project_manager";
+  const canManage = canManageProjects(user);
 
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<CreateProjectRequest>({ name: "", description: "", startDate: new Date(), endDate: new Date() });

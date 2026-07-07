@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWeeklyReportRouteImport } from './routes/_authenticated.weekly-report'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated.users'
 import { Route as AuthenticatedSentRouteImport } from './routes/_authenticated.sent'
 import { Route as AuthenticatedRegisterRouteImport } from './routes/_authenticated.register'
 import { Route as AuthenticatedProjectRouteImport } from './routes/_authenticated.project'
@@ -41,6 +42,11 @@ const AuthenticatedWeeklyReportRoute =
     path: '/weekly-report',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedSentRoute = AuthenticatedSentRouteImport.update({
   id: '/sent',
   path: '/sent',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/project': typeof AuthenticatedProjectRoute
   '/register': typeof AuthenticatedRegisterRoute
   '/sent': typeof AuthenticatedSentRoute
+  '/users': typeof AuthenticatedUsersRoute
   '/weekly-report': typeof AuthenticatedWeeklyReportRoute
 }
 export interface FileRoutesByTo {
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/project': typeof AuthenticatedProjectRoute
   '/register': typeof AuthenticatedRegisterRoute
   '/sent': typeof AuthenticatedSentRoute
+  '/users': typeof AuthenticatedUsersRoute
   '/weekly-report': typeof AuthenticatedWeeklyReportRoute
 }
 export interface FileRoutesById {
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/_authenticated/project': typeof AuthenticatedProjectRoute
   '/_authenticated/register': typeof AuthenticatedRegisterRoute
   '/_authenticated/sent': typeof AuthenticatedSentRoute
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/weekly-report': typeof AuthenticatedWeeklyReportRoute
 }
 export interface FileRouteTypes {
@@ -127,6 +136,7 @@ export interface FileRouteTypes {
     | '/project'
     | '/register'
     | '/sent'
+    | '/users'
     | '/weekly-report'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/project'
     | '/register'
     | '/sent'
+    | '/users'
     | '/weekly-report'
   id:
     | '__root__'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/_authenticated/project'
     | '/_authenticated/register'
     | '/_authenticated/sent'
+    | '/_authenticated/users'
     | '/_authenticated/weekly-report'
   fileRoutesById: FileRoutesById
 }
@@ -189,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/weekly-report'
       fullPath: '/weekly-report'
       preLoaderRoute: typeof AuthenticatedWeeklyReportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/sent': {
@@ -251,6 +270,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedProjectRoute: typeof AuthenticatedProjectRoute
   AuthenticatedRegisterRoute: typeof AuthenticatedRegisterRoute
   AuthenticatedSentRoute: typeof AuthenticatedSentRoute
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedWeeklyReportRoute: typeof AuthenticatedWeeklyReportRoute
 }
 
@@ -262,6 +282,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProjectRoute: AuthenticatedProjectRoute,
   AuthenticatedRegisterRoute: AuthenticatedRegisterRoute,
   AuthenticatedSentRoute: AuthenticatedSentRoute,
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedWeeklyReportRoute: AuthenticatedWeeklyReportRoute,
 }
 

@@ -1,5 +1,6 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { getLedProjectIds, isAdmin, isLeaderOf } from "@/lib/permissions";
 import { CheckCircle2, ChevronDown, Forward, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -29,6 +30,16 @@ export const Route = createFileRoute("/_authenticated/pending")({
 
 function PendingPage() {
   const { user } = useAuth();
+  const { data: projects = [], isLoading } = useProjects();
+  if (isLoading) return null;
+  const ledProjectIds = getLedProjectIds(projects, user?.id);
+  const canAccess = isLeaderOf(user, ledProjectIds) || isAdmin(user);
+  if (!canAccess) return <Navigate to="/dashboard" />;
+  return <PendingPageContent />;
+}
+
+function PendingPageContent() {
+  const { user } = useAuth();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
@@ -37,6 +48,7 @@ function PendingPage() {
   const { data: users = [] } = useUsers();
   const { data: projects = [] } = useProjects();
   const projectNameById = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
+  const ledProjectIds = getLedProjectIds(projects, user?.id);
 
   const queryClient = useQueryClient();
   const { mutate: changeStatus } = useMutation({
@@ -44,9 +56,6 @@ function PendingPage() {
       reportService.updateReportStatus(...args),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reports"] }),
   });
-
-  const canAccess = user!.role === "team_leader" || user!.role === "admin" || (user!.role === "employee" && !!user!.isProjectLeader);
-  if (!canAccess) return <Navigate to="/dashboard" />;
 
   const pending = useMemo(
     () =>
@@ -151,17 +160,19 @@ function PendingPage() {
                       </tbody>
                     </table>
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-card px-6 py-3">
-                    <Button variant="outline" onClick={() => setRejectId(r.id ?? null)}>
-                      <XCircle className="mr-2 h-4 w-4" /> Reject
-                    </Button>
-                    <Button variant="outline" onClick={() => handleVerify(r.id ?? "")}>
-                      <CheckCircle2 className="mr-2 h-4 w-4" /> Verify
-                    </Button>
-                    <Button onClick={() => handleForward(r.id ?? "")}>
-                      <Forward className="mr-2 h-4 w-4" /> Forward to PM
-                    </Button>
-                  </div>
+                  {(isLeaderOf(user, ledProjectIds, r.projectId) || isAdmin(user)) && (
+                    <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-card px-6 py-3">
+                      <Button variant="outline" onClick={() => setRejectId(r.id ?? null)}>
+                        <XCircle className="mr-2 h-4 w-4" /> Reject
+                      </Button>
+                      <Button variant="outline" onClick={() => handleVerify(r.id ?? "")}>
+                        <CheckCircle2 className="mr-2 h-4 w-4" /> Verify
+                      </Button>
+                      <Button onClick={() => handleForward(r.id ?? "")}>
+                        <Forward className="mr-2 h-4 w-4" /> Forward to PM
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

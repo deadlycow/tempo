@@ -21,6 +21,7 @@ import { useReports } from "@/hooks/useReports";
 import { Status } from "@/Enum/Status";
 import { useProjects } from "@/hooks/useProjects";
 import { useUsers } from "@/hooks/useUsers";
+import { getLedProjectIds, isLeaderOf } from "@/lib/permissions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -28,8 +29,10 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function DashboardPage() {
   const { user } = useAuth();
+  const { data: projects = [] } = useProjects();
   if (!user) return null;
-  if (user.role === "team_leader" || user.role === "admin") return <LeaderDashboard />;
+  const ledProjectIds = getLedProjectIds(projects, user.id);
+  if (isLeaderOf(user, ledProjectIds)) return <LeaderDashboard />;
   if (user.role === "project_manager") return <ProjectManagerDashboard />;
   return <EmployeeDashboard />;
 }

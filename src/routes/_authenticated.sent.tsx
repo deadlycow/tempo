@@ -21,6 +21,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Status } from "@/Enum/Status";
 import * as reportService from "@/services/reportService";
+import { getLedProjectIds, isAdmin, isLeaderOf } from "@/lib/permissions";
 
 export const Route = createFileRoute("/_authenticated/sent")({
   component: SentPage,
@@ -28,15 +29,24 @@ export const Route = createFileRoute("/_authenticated/sent")({
 
 function SentPage() {
   const { user } = useAuth();
-  const canAccess = user?.role === "team_leader" || user?.role === "admin" || (user?.role === "employee" && !!user?.isProjectLeader);
+  const { data: projects = [], isLoading } = useProjects();
+  if (isLoading) return null;
+  const ledProjectIds = getLedProjectIds(projects, user?.id);
+  const canAccess = isLeaderOf(user, ledProjectIds) || isAdmin(user);
   if (!canAccess) return <Navigate to="/dashboard" />;
+  return <SentPageContent />;
+}
+
+function SentPageContent() {
+  const { user } = useAuth();
+  const { data: projects = [] } = useProjects();
+  const ledProjectIds = getLedProjectIds(projects, user?.id);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const { data: reports = [] } = useReports();
   const { data: users = [] } = useUsers();
-  const { data: projects = [] } = useProjects();
   const projectNameById = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
 
   const queryClient = useQueryClient();
@@ -56,8 +66,9 @@ function SentPage() {
     () =>
       reports
         .filter((r) => r.status === Status.verified)
+        .filter((r) => isLeaderOf(user, ledProjectIds, r.projectId) || isAdmin(user))
         .sort((a, b) => (b.verifiedAt ?? "").localeCompare(a.verifiedAt ?? "")),
-    [reports]
+    [reports, user, ledProjectIds]
   );
 
   const toggle = (id: string) => {

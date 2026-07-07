@@ -1,4 +1,4 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
@@ -21,15 +21,22 @@ import { useProjects } from "@/hooks/useProjects";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Status } from "@/Enum/Status";
 import * as reportService from "@/services/reportService";
+import { RequireRole } from "@/components/RequireRole";
 
 export const Route = createFileRoute("/_authenticated/pm-review")({
   component: PmReviewPage,
 });
 
 function PmReviewPage() {
+  return (
+    <RequireRole roles={["project_manager", "admin"]}>
+      <PmReviewPageContent />
+    </RequireRole>
+  );
+}
+
+function PmReviewPageContent() {
   const { user } = useAuth();
-  const canAccess = user?.role === "project_manager" || user?.role === "admin";
-  if (!canAccess) return <Navigate to="/dashboard" />;
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);

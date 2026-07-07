@@ -1,3 +1,5 @@
+import type { Role } from "@/lib/types"
+
 interface LoginRequest {
   email: string,
   password: string
@@ -7,7 +9,7 @@ interface RegisterRequest {
   email: string,
   password: string,
   phoneNumber?: string,
-  role: string
+  role: Role
 }
 export {
   LoginRequest,
