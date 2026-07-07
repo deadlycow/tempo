@@ -1,0 +1,8 @@
+{
+  "name": "run-tempo-frontend-driver",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}
