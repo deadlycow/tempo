@@ -1,9 +1,11 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type SubmitEvent } from "react";
-import { UserPlus, ShieldAlert, Users, Mail } from "lucide-react";
+import { UserPlus, ShieldAlert, Users } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
 import type { Role } from "@/lib/types";
+import { RequireRole } from "@/components/RequireRole";
+import { assignableRoles, roleLabel } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,37 +35,31 @@ const schema = z.object({
   role: z.enum(["employee", "team_leader", "project_manager"]),
 });
 
+type RegisterFormState = Omit<RegisterRequest, "role"> & { role: Role | "" };
+
 function RegisterPage() {
+  return (
+    <RequireRole roles={["admin", "team_leader"]}>
+      <RegisterPageContent />
+    </RequireRole>
+  );
+}
+
+function RegisterPageContent() {
   const { user } = useAuth();
   const queryClient = useQueryClient()
 
-  const canAccess = user?.role === "admin" || user?.role === "team_leader";
-  if (!canAccess) return <Navigate to="/dashboard" />;
-
   const allowedRoles = useMemo<{ value: Role; label: string }[]>(
-    () =>
-      user?.role === "admin"
-        ? [
-          { value: "employee", label: "Employee" },
-          { value: "team_leader", label: "Team Leader" },
-          { value: "project_manager", label: "Project Manager" }
-        ]
-        : [{ value: "employee", label: "Employee" }],
-    [user?.role]
+    () => assignableRoles(user).map((value) => ({ value, label: roleLabel(value) })),
+    [user]
   );
 
-  const [email, setEmail] = useState("")
-  const [team, setTeam] = useState(user?.team ?? "");
+  const [team, setTeam] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState<RegisterRequest>({ name: "", email: "", password: "", role: "" })
+  const [form, setForm] = useState<RegisterFormState>({ name: "", email: "", password: "", role: "" })
 
   const { data: apiUsers = [] } = useUsers()
-
-  const request = {
-    ...form,
-    password: "Bytmig123!"
-  }
 
   const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault();
@@ -72,7 +68,7 @@ function RegisterPage() {
       toast.error(parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    if (user?.role === "team_leader" && parsed.data.role !== "employee") {
+    if (!assignableRoles(user).includes(parsed.data.role)) {
       toast.error("Team leaders can only create employee accounts");
       return;
     }
@@ -82,7 +78,7 @@ function RegisterPage() {
     }
     setSubmitting(true);
     try {
-      const response = await registerUser(request)
+      const response = await registerUser({ ...form, role: parsed.data.role, password: "Bytmig123!" })
       if (!response) {
         toast.error(`Failed to register ${form.name}`)
         return
@@ -113,104 +109,73 @@ function RegisterPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        {(user?.role === "admin" || user?.role === "team_leader") && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <UserPlus className="h-4 w-4" /> Account details
-              </CardTitle>
-              <CardDescription>The user will be able to sign in with the email below.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="name">Full name</Label>
-                  <Input
-                    id="name"
-                    value={form.name}
-                    onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Jane Andersson"
-                    required
-                    maxLength={80}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Work email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="jane@acme.co"
-                    required
-                    maxLength={160}
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="team">Team</Label>
-                  <Input
-                    id="team"
-                    value={team}
-                    onChange={(e) => setTeam(e.target.value)}
-                    placeholder="Platform"
-                    maxLength={60}
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select value={form.role} onValueChange={(v) => setForm(prev => ({ ...prev, role: v as Role }))}>
-                    <SelectTrigger id="role">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allowedRoles.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>
-                          {r.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {user?.role === "team_leader" && (
-                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <ShieldAlert className="h-3.5 w-3.5" />
-                      Only an admin can create another team leader.
-                    </p>
-                  )}
-                </div>
-                <div className="sm:col-span-2">
-                  <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-                    {submitting ? "Creating..." : "Create account"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Mail className="h-4 w-4" /> Account invitation
+              <UserPlus className="h-4 w-4" /> Account details
             </CardTitle>
-            <CardDescription>The user will receive an invitation to join the organization.</CardDescription>
+            <CardDescription>The user will be able to sign in with the email below.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-4 sm:grid-cols-2">
+            <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="name">Full name</Label>
                 <Input
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="jane.andersson@acme.co"
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Jane Andersson"
                   required
                   maxLength={80}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Work email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="jane@acme.co"
+                  required
+                  maxLength={160}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="team">Team</Label>
+                <Input
+                  id="team"
+                  value={team}
+                  onChange={(e) => setTeam(e.target.value)}
+                  placeholder="Platform"
+                  maxLength={60}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="role">Role</Label>
+                <Select value={form.role} onValueChange={(v) => setForm(prev => ({ ...prev, role: v as Role }))}>
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allowedRoles.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {user?.role === "team_leader" && (
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <ShieldAlert className="h-3.5 w-3.5" />
+                    Only an admin can create another team leader.
+                  </p>
+                )}
+              </div>
               <div className="sm:col-span-2">
                 <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-                  {submitting ? "Sending..." : "Send invitation"}
+                  {submitting ? "Creating..." : "Create account"}
                 </Button>
               </div>
             </form>
@@ -268,17 +233,4 @@ function RegisterPage() {
       </div>
     </div>
   );
-}
-
-function roleLabel(role: Role) {
-  switch (role) {
-    case "admin":
-      return "Admin";
-    case "team_leader":
-      return "Team Leader";
-    case "project_manager":
-      return "Project Manager"
-    default:
-      return "Employee";
-  }
 }

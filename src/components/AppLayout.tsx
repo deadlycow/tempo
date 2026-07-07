@@ -1,9 +1,11 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Clock3, LayoutDashboard, History, Inbox, Send, LogOut, Menu, X, FileEdit, UserPlus, FolderCog, Forward } from "lucide-react";
+import { Clock3, LayoutDashboard, History, Inbox, Send, LogOut, Menu, X, FileEdit, UserPlus, FolderCog, Forward, Users } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useProjects } from "@/hooks/useProjects";
+import { getLedProjectIds, isLeaderOf, roleLabel } from "@/lib/permissions";
 
 interface NavItem {
   to: string;
@@ -40,6 +42,7 @@ const adminNav: NavItem[] = [
   { to: "/pm-review", label: "PM Review", icon: Send },
   { to: "/history", label: "History", icon: History },
   { to: "/register", label: "Add User", icon: UserPlus },
+  { to: "/users", label: "Manage Users", icon: Users },
   { to: "/project", label: "Projects", icon: FolderCog },
 ];
 
@@ -48,9 +51,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: projects = [] } = useProjects();
 
   if (!user) return null;
-  const isLeaderRole = user.role === "team_leader" || (user.role === "employee" && !!user.isProjectLeader);
+  const ledProjectIds = getLedProjectIds(projects, user.id);
+  const isLeaderRole = isLeaderOf(user, ledProjectIds);
   const items =
     user.role === "admin" ? adminNav : user.role === "project_manager" ? projectNav : isLeaderRole ? leaderNav : employeeNav;
 
@@ -93,7 +98,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 space-y-1 p-3">
           <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-            {user.role === "admin" ? "Admin" : user.role === "project_manager" ? "Project Manager" : isLeaderRole ? "Team Leader" : "Employee"}
+            {isLeaderRole && user.role === "employee" ? "Team Leader" : roleLabel(user.role)}
           </p>
           {items.map((item) => {
             const active = pathname === item.to || (item.to !== "/dashboard" && pathname.startsWith(item.to));
@@ -148,7 +153,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </button>
           <div className="hidden md:block">
             <h1 className="text-sm font-medium text-muted-foreground">
-              {user.role === "admin" ? "Admin Workspace" : user.role === "project_manager" ? "Project Manager workspace" : isLeaderRole ? "Team Leader workspace" : "Employee workspace"}
+              {user.role === "admin"
+                ? "Admin Workspace"
+                : isLeaderRole && user.role === "employee"
+                  ? "Team Leader workspace"
+                  : `${roleLabel(user.role)} workspace`}
             </h1>
           </div>
           <div className="text-sm text-muted-foreground">

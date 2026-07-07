@@ -16,6 +16,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useUsers } from "@/hooks/useUsers";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as reportService from "@/services/reportService";
+import { getLedProjectIds, isAdmin as isAdminUser, isLeaderOf } from "@/lib/permissions";
 import {
   Dialog,
   DialogContent,
@@ -40,13 +41,14 @@ function HistoryPage() {
   const [overrideStatus, setOverrideStatus] = useState<string>("");
 
   const { data: users = [] } = useUsers();
-  const isLeader = user!.role === "team_leader" || (user!.role === "employee" && !!user!.isProjectLeader);
-  const isAdmin = user!.role === "admin";
-  const showEmployee = isLeader || isAdmin || user!.role === "project_manager";
-  const employees = users.filter((u) => u.role === "employee");
-
   const { data: projects } = useProjects();
   const { data: reports } = useReports();
+
+  const ledProjectIds = getLedProjectIds(projects ?? [], user!.id);
+  const isLeader = isLeaderOf(user, ledProjectIds);
+  const isAdmin = isAdminUser(user);
+  const showEmployee = isLeader || isAdmin || user!.role === "project_manager";
+  const employees = users.filter((u) => u.role === "employee");
 
   const queryClient = useQueryClient();
   const { mutate: doOverride } = useMutation({

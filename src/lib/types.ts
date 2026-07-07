@@ -9,7 +9,6 @@ export interface User {
   role: Role;
   isProjectLeader?: boolean;
   avatar?: string;
-  team?: string;
 }
 
 export interface TimeEntry {
