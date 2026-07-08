@@ -8,6 +8,8 @@ import { roleLabel } from "@/lib/permissions";
 import type { Role } from "@/lib/types";
 import { useUsers, useUpdateUserRole } from "@/hooks/useUsers";
 import { useProjects } from "@/hooks/useProjects";
+import { useReports } from "@/hooks/useReports";
+import { Status } from "@/Enum/Status";
 import { assignLeader, removeLeader } from "@/services/projectService";
 import {
   Select,
@@ -16,6 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -36,9 +46,11 @@ function UsersPage() {
 function UsersPageContent() {
   const { data: apiUsers = [] } = useUsers();
   const { data: projects = [] } = useProjects();
+  const { data: allReports = [] } = useReports();
   const queryClient = useQueryClient();
 
   const [pendingProjectByUser, setPendingProjectByUser] = useState<Record<string, string>>({});
+  const [pendingRemoval, setPendingRemoval] = useState<{ projectId: string; projectName: string; leaderId: string; reportCount: number } | null>(null);
 
   const adminCount = useMemo(() => apiUsers.filter((u) => u.role === "admin").length, [apiUsers]);
 
@@ -76,6 +88,19 @@ function UsersPageContent() {
     return map;
   }, [projects]);
 
+  const handleRemoveLeaderClick = (projectId: string, projectName: string, leaderId: string) => {
+    const project = projects.find((p) => p.id === projectId);
+    const isLastLeader = (project?.teamLeaders?.length ?? 0) <= 1;
+    const reportCount = allReports.filter(
+      (r) => r.projectId === projectId && r.status === Status.submitted
+    ).length;
+    if (isLastLeader && reportCount > 0) {
+      setPendingRemoval({ projectId, projectName, leaderId, reportCount });
+      return;
+    }
+    doRemove({ projectId, leaderId });
+  };
+
   const handleRoleChange = (userId: string, role: Role) => {
     changeRole(
       { userId, role },
@@ -106,7 +131,10 @@ function UsersPageContent() {
             const isLastAdmin = u.role === "admin" && adminCount <= 1;
             const ledProjects = ledProjectsByUser.get(u.userId ?? "") ?? [];
             const pendingProjectId = pendingProjectByUser[u.userId ?? ""] ?? "";
-            const assignableProjects = projects.filter((p) => !ledProjects.some((lp) => lp.id === p.id));
+            const canBeAssignedAsLeader = u.role === "employee" || u.role === "team_leader";
+            const assignableProjects = canBeAssignedAsLeader
+              ? projects.filter((p) => !ledProjects.some((lp) => lp.id === p.id))
+              : [];
 
             return (
               <div key={u.userId} className="rounded-lg border bg-card p-3">
@@ -141,7 +169,7 @@ function UsersPageContent() {
                     >
                       {p.name}
                       <button
-                        onClick={() => doRemove({ projectId: p.id, leaderId: u.userId ?? "" })}
+                        onClick={() => handleRemoveLeaderClick(p.id, p.name, u.userId ?? "")}
                         aria-label={`Remove leadership of ${p.name}`}
                         className="text-muted-foreground hover:text-destructive"
                       >
@@ -188,6 +216,32 @@ function UsersPageContent() {
           })}
         </CardContent>
       </Card>
+
+      <Dialog open={!!pendingRemoval} onOpenChange={(o) => !o && setPendingRemoval(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove leadership of {pendingRemoval?.projectName}?</DialogTitle>
+            <DialogDescription>
+              This project has {pendingRemoval?.reportCount} report{pendingRemoval?.reportCount === 1 ? "" : "s"} awaiting
+              approval and no other leader — only admins and team leaders will be able to approve them until someone
+              new is assigned.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingRemoval(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!pendingRemoval) return;
+                doRemove({ projectId: pendingRemoval.projectId, leaderId: pendingRemoval.leaderId });
+                setPendingRemoval(null);
+              }}
+            >
+              Remove anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

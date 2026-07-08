@@ -16,6 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CreateProjectRequest } from "@/types/requests/ProjectRequest";
@@ -23,6 +31,8 @@ import { createProject, assignLeader, removeLeader } from "@/services/projectSer
 import { ProjectResponse } from "@/types/responses/ProjectResponse";
 import { useProjects } from "@/hooks/useProjects";
 import { useUsers } from "@/hooks/useUsers";
+import { useReports } from "@/hooks/useReports";
+import { Status } from "@/Enum/Status";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/project")({
@@ -56,9 +66,11 @@ function ProjectPageContent() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<CreateProjectRequest>({ name: "", description: "", startDate: new Date(), endDate: new Date() });
   const [selectedLeader, setSelectedLeader] = useState<Record<string, string>>({});
+  const [pendingRemoval, setPendingRemoval] = useState<{ projectId: string; leaderId: string; leaderName: string; reportCount: number } | null>(null);
 
   const { data: allProjects = [], isLoading } = useProjects();
   const { data: allUsers = [] } = useUsers();
+  const { data: allReports = [] } = useReports();
   const assignableUsers = allUsers.filter((u) => u.role === "employee" || u.role === "team_leader");
 
   const today = new Date().toISOString().split("T")[0];
@@ -82,6 +94,18 @@ function ProjectPageContent() {
     },
     onError: () => toast.error("Failed to remove team leader"),
   });
+
+  const handleRemoveLeaderClick = (project: ProjectResponse, leaderId: string, leaderName: string) => {
+    const isLastLeader = (project.teamLeaders?.length ?? 0) <= 1;
+    const reportCount = allReports.filter(
+      (r) => r.projectId === project.id && r.status === Status.submitted
+    ).length;
+    if (isLastLeader && reportCount > 0) {
+      setPendingRemoval({ projectId: project.id, leaderId, leaderName, reportCount });
+      return;
+    }
+    doRemove({ projectId: project.id, leaderId });
+  };
 
   const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault();
@@ -222,7 +246,7 @@ function ProjectPageContent() {
                               {tl.leader.name}
                               {canManage && (
                                 <button
-                                  onClick={() => doRemove({ projectId: project.id, leaderId: tl.leader.id })}
+                                  onClick={() => handleRemoveLeaderClick(project, tl.leader.id, tl.leader.name)}
                                   className="ml-0.5 rounded-full text-muted-foreground hover:text-destructive"
                                   aria-label={`Remove ${tl.leader.name}`}
                                 >
@@ -275,6 +299,32 @@ function ProjectPageContent() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!pendingRemoval} onOpenChange={(o) => !o && setPendingRemoval(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove {pendingRemoval?.leaderName}?</DialogTitle>
+            <DialogDescription>
+              This project has {pendingRemoval?.reportCount} report{pendingRemoval?.reportCount === 1 ? "" : "s"} awaiting
+              approval and no other leader — only admins and team leaders will be able to approve them until someone
+              new is assigned.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingRemoval(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!pendingRemoval) return;
+                doRemove({ projectId: pendingRemoval.projectId, leaderId: pendingRemoval.leaderId });
+                setPendingRemoval(null);
+              }}
+            >
+              Remove anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

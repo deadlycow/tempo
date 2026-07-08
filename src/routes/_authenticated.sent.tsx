@@ -60,6 +60,7 @@ function SentPageContent() {
       );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reports"] }),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to forward reports"),
   });
 
   const verified = useMemo(

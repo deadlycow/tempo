@@ -55,6 +55,7 @@ function PendingPageContent() {
     mutationFn: (args: Parameters<typeof reportService.updateReportStatus>) =>
       reportService.updateReportStatus(...args),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reports"] }),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to update report"),
   });
 
   const pending = useMemo(
