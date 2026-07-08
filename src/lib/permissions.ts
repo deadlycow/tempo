@@ -46,18 +46,49 @@ export function getLedProjectIds(
     .map((p) => p.id);
 }
 
-// Reconciles the dual leader model. team_leader/admin are global leaders
-// (matches the backend's project-scoping decision). employee-role
-// leadership is project-scoped via ledProjectIds when a projectId is
-// given, else "leads at least one project."
+// team_leader now requires an actual per-project ProjectLeader assignment to
+// act on a specific project's reports (only admin is unconditional) — but
+// team_leader keeps its coarse, role-based "is a leader-type user" status
+// when no projectId is given, since nav visibility (e.g. the "Add User" link
+// in AppLayout) and page-level access shouldn't depend on whether they
+// happen to be assigned to a project yet; only the per-report action check
+// (with a projectId) needs the real assignment.
 export function isLeaderOf(
   user: User | null | undefined,
   ledProjectIds: string[],
   projectId?: string,
 ): boolean {
   if (!user) return false;
-  if (user.role === "team_leader" || user.role === "admin") return true;
-  if (user.role !== "employee") return false;
-  if (!projectId) return ledProjectIds.length > 0;
+  if (user.role === "admin") return true;
+  if (user.role !== "team_leader" && user.role !== "employee") return false;
+  if (!projectId) return user.role === "team_leader" || ledProjectIds.length > 0;
   return ledProjectIds.includes(projectId);
+}
+
+// Derives which project IDs a user manages (as project_manager) from the
+// already-fetched project list's projectManagers array — mirrors
+// getLedProjectIds.
+export function getManagedProjectIds(
+  projects: ProjectResponse[],
+  userId: string | undefined,
+): string[] {
+  if (!userId) return [];
+  return projects
+    .filter((p) => p.projectManagers?.some((pm) => pm.manager.id === userId))
+    .map((p) => p.id);
+}
+
+// project_manager has no other privilege riding on this flag (unlike
+// team_leader's "Add User" access), so a plain unconditional-except-admin
+// check works in both the coarse and per-project modes.
+export function isManagerOf(
+  user: User | null | undefined,
+  managedProjectIds: string[],
+  projectId?: string,
+): boolean {
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  if (user.role !== "project_manager") return false;
+  if (!projectId) return managedProjectIds.length > 0;
+  return managedProjectIds.includes(projectId);
 }

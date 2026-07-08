@@ -5,6 +5,11 @@ interface ProjectLeader {
   assignedAt: string
 }
 
+interface ProjectManager {
+  manager: { id: string; name: string; email: string }
+  assignedAt: string
+}
+
 interface ProjectResponse {
   id: string,
   name: string,
@@ -13,9 +18,11 @@ interface ProjectResponse {
   endDate?: Date,
   timeEntries?: TimeEntryResponse[]
   teamLeaders?: ProjectLeader[]
+  projectManagers?: ProjectManager[]
 }
 
 export {
   ProjectResponse,
-  ProjectLeader
+  ProjectLeader,
+  ProjectManager
 }

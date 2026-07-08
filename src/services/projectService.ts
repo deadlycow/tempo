@@ -70,10 +70,38 @@ const removeLeader = async (projectId: string, leaderId: string) => {
   return response.status
 }
 
+const assignManager = async (projectId: string, managerId: string) => {
+  const response = await fetch(`${baseUrl}api/project/${projectId}/managers`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ managerId })
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.message ?? 'Failed to assign project manager')
+  }
+  return response.status
+}
+
+const removeManager = async (projectId: string, managerId: string) => {
+  const response = await fetch(`${baseUrl}api/project/${projectId}/managers/${managerId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.message ?? 'Failed to remove project manager')
+  }
+  return response.status
+}
+
 export {
   createProject,
   getProject,
   getAllProjects,
   assignLeader,
-  removeLeader
+  removeLeader,
+  assignManager,
+  removeManager
 }
