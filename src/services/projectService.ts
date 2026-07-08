@@ -51,7 +51,10 @@ const assignLeader = async (projectId: string, leaderId: string) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ leaderId })
   })
-  if (!response.ok) return null
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.message ?? 'Failed to assign team leader')
+  }
   return response.status
 }
 
@@ -60,7 +63,10 @@ const removeLeader = async (projectId: string, leaderId: string) => {
     method: 'DELETE',
     credentials: 'include',
   })
-  if (!response.ok) return null
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.message ?? 'Failed to remove team leader')
+  }
   return response.status
 }
 

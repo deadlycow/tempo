@@ -53,7 +53,10 @@ const updateReportStatus = async (reportId: string, data: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    if (!response.ok) return null
+    if (!response.ok) {
+        const body = await response.json().catch(() => null)
+        throw new Error(body?.message ?? 'Failed to update report status')
+    }
     return response.status
 }
 
