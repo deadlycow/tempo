@@ -27,7 +27,7 @@ import {
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CreateProjectRequest } from "@/types/requests/ProjectRequest";
-import { createProject, assignLeader, removeLeader } from "@/services/projectService";
+import { createProject, assignLeader, removeLeader, assignManager, removeManager } from "@/services/projectService";
 import { ProjectResponse } from "@/types/responses/ProjectResponse";
 import { useProjects } from "@/hooks/useProjects";
 import { useUsers } from "@/hooks/useUsers";
@@ -66,12 +66,15 @@ function ProjectPageContent() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<CreateProjectRequest>({ name: "", description: "", startDate: new Date(), endDate: new Date() });
   const [selectedLeader, setSelectedLeader] = useState<Record<string, string>>({});
+  const [selectedManager, setSelectedManager] = useState<Record<string, string>>({});
   const [pendingRemoval, setPendingRemoval] = useState<{ projectId: string; leaderId: string; leaderName: string; reportCount: number } | null>(null);
+  const [pendingManagerRemoval, setPendingManagerRemoval] = useState<{ projectId: string; managerId: string; managerName: string; reportCount: number } | null>(null);
 
   const { data: allProjects = [], isLoading } = useProjects();
   const { data: allUsers = [] } = useUsers();
   const { data: allReports = [] } = useReports();
   const assignableUsers = allUsers.filter((u) => u.role === "employee" || u.role === "team_leader");
+  const assignableManagers = allUsers.filter((u) => u.role === "project_manager");
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -82,7 +85,7 @@ function ProjectPageContent() {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Team leader assigned");
     },
-    onError: () => toast.error("Failed to assign team leader"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to assign team leader"),
   });
 
   const { mutate: doRemove } = useMutation({
@@ -92,7 +95,27 @@ function ProjectPageContent() {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Team leader removed");
     },
-    onError: () => toast.error("Failed to remove team leader"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to remove team leader"),
+  });
+
+  const { mutate: doAssignManager } = useMutation({
+    mutationFn: ({ projectId, managerId }: { projectId: string; managerId: string }) =>
+      assignManager(projectId, managerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Project manager assigned");
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to assign project manager"),
+  });
+
+  const { mutate: doRemoveManager } = useMutation({
+    mutationFn: ({ projectId, managerId }: { projectId: string; managerId: string }) =>
+      removeManager(projectId, managerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Project manager removed");
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to remove project manager"),
   });
 
   const handleRemoveLeaderClick = (project: ProjectResponse, leaderId: string, leaderName: string) => {
@@ -105,6 +128,18 @@ function ProjectPageContent() {
       return;
     }
     doRemove({ projectId: project.id, leaderId });
+  };
+
+  const handleRemoveManagerClick = (project: ProjectResponse, managerId: string, managerName: string) => {
+    const isLastManager = (project.projectManagers?.length ?? 0) <= 1;
+    const reportCount = allReports.filter(
+      (r) => r.projectId === project.id && r.status === Status.forwarded
+    ).length;
+    if (isLastManager && reportCount > 0) {
+      setPendingManagerRemoval({ projectId: project.id, managerId, managerName, reportCount });
+      return;
+    }
+    doRemoveManager({ projectId: project.id, managerId });
   };
 
   const handleSubmit = async (e: SubmitEvent) => {
@@ -216,6 +251,8 @@ function ProjectPageContent() {
               allProjects.map((project: ProjectResponse) => {
                 const assignedIds = new Set(project.teamLeaders?.map((tl) => tl.leader.id) ?? []);
                 const available = assignableUsers.filter((l) => !assignedIds.has(l.userId ?? ""));
+                const assignedManagerIds = new Set(project.projectManagers?.map((pm) => pm.manager.id) ?? []);
+                const availableManagers = assignableManagers.filter((m) => !assignedManagerIds.has(m.userId ?? ""));
                 return (
                   <div key={project.id} className="rounded-lg border bg-card p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
@@ -292,6 +329,69 @@ function ProjectPageContent() {
                         </div>
                       )}
                     </div>
+
+                    <div className="space-y-2">
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <Users className="h-3 w-3" /> Project managers
+                      </p>
+                      {(project.projectManagers?.length ?? 0) === 0 ? (
+                        <p className="text-xs text-muted-foreground italic">No managers assigned</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {project.projectManagers?.map((pm) => (
+                            <span
+                              key={pm.manager.id}
+                              className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs font-medium"
+                            >
+                              {pm.manager.name}
+                              {canManage && (
+                                <button
+                                  onClick={() => handleRemoveManagerClick(project, pm.manager.id, pm.manager.name)}
+                                  className="ml-0.5 rounded-full text-muted-foreground hover:text-destructive"
+                                  aria-label={`Remove ${pm.manager.name}`}
+                                >
+                                  <UserMinus className="h-3 w-3" />
+                                </button>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {canManage && availableManagers.length > 0 && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <Select
+                            value={selectedManager[project.id] ?? ""}
+                            onValueChange={(v) => setSelectedManager((prev) => ({ ...prev, [project.id]: v }))}
+                          >
+                            <SelectTrigger className="h-7 text-xs">
+                              <SelectValue placeholder="Add project manager..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableManagers.map((m) => (
+                                <SelectItem key={m.userId} value={m.userId ?? ""}>
+                                  {m.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            disabled={!selectedManager[project.id]}
+                            onClick={() => {
+                              const managerId = selectedManager[project.id];
+                              if (!managerId) return;
+                              doAssignManager({ projectId: project.id, managerId });
+                              setSelectedManager((prev) => ({ ...prev, [project.id]: "" }));
+                            }}
+                          >
+                            <UserPlus className="mr-1 h-3 w-3" /> Assign
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })
@@ -306,8 +406,7 @@ function ProjectPageContent() {
             <DialogTitle>Remove {pendingRemoval?.leaderName}?</DialogTitle>
             <DialogDescription>
               This project has {pendingRemoval?.reportCount} report{pendingRemoval?.reportCount === 1 ? "" : "s"} awaiting
-              approval and no other leader — only admins and team leaders will be able to approve them until someone
-              new is assigned.
+              approval and no other leader — only admins will be able to approve them until someone new is assigned.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -318,6 +417,32 @@ function ProjectPageContent() {
                 if (!pendingRemoval) return;
                 doRemove({ projectId: pendingRemoval.projectId, leaderId: pendingRemoval.leaderId });
                 setPendingRemoval(null);
+              }}
+            >
+              Remove anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pendingManagerRemoval} onOpenChange={(o) => !o && setPendingManagerRemoval(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove {pendingManagerRemoval?.managerName}?</DialogTitle>
+            <DialogDescription>
+              This project has {pendingManagerRemoval?.reportCount} report{pendingManagerRemoval?.reportCount === 1 ? "" : "s"} forwarded
+              for payroll and no other project manager — only admins will be able to send them to payroll until
+              someone new is assigned.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingManagerRemoval(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!pendingManagerRemoval) return;
+                doRemoveManager({ projectId: pendingManagerRemoval.projectId, managerId: pendingManagerRemoval.managerId });
+                setPendingManagerRemoval(null);
               }}
             >
               Remove anyway

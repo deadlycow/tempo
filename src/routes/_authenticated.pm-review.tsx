@@ -22,6 +22,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Status } from "@/Enum/Status";
 import * as reportService from "@/services/reportService";
 import { RequireRole } from "@/components/RequireRole";
+import { getManagedProjectIds, isManagerOf } from "@/lib/permissions";
 
 export const Route = createFileRoute("/_authenticated/pm-review")({
   component: PmReviewPage,
@@ -45,6 +46,7 @@ function PmReviewPageContent() {
   const { data: users = [] } = useUsers();
   const { data: projects = [] } = useProjects();
   const projectNameById = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
+  const managedProjectIds = getManagedProjectIds(projects, user?.id);
 
   const queryClient = useQueryClient();
   const { mutate: sendToPayroll } = useMutation({
@@ -63,8 +65,9 @@ function PmReviewPageContent() {
     () =>
       reports
         .filter((r) => r.status === Status.forwarded)
+        .filter((r) => isManagerOf(user, managedProjectIds, r.projectId))
         .sort((a, b) => (b.forwardedAt ?? "").localeCompare(a.forwardedAt ?? "")),
-    [reports]
+    [reports, user, managedProjectIds]
   );
 
   const toggle = (id: string) => {

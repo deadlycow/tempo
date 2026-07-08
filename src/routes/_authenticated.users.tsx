@@ -10,7 +10,7 @@ import { useUsers, useUpdateUserRole } from "@/hooks/useUsers";
 import { useProjects } from "@/hooks/useProjects";
 import { useReports } from "@/hooks/useReports";
 import { Status } from "@/Enum/Status";
-import { assignLeader, removeLeader } from "@/services/projectService";
+import { assignLeader, removeLeader, assignManager, removeManager } from "@/services/projectService";
 import {
   Select,
   SelectContent,
@@ -50,7 +50,9 @@ function UsersPageContent() {
   const queryClient = useQueryClient();
 
   const [pendingProjectByUser, setPendingProjectByUser] = useState<Record<string, string>>({});
+  const [pendingManagerProjectByUser, setPendingManagerProjectByUser] = useState<Record<string, string>>({});
   const [pendingRemoval, setPendingRemoval] = useState<{ projectId: string; projectName: string; leaderId: string; reportCount: number } | null>(null);
+  const [pendingManagerRemoval, setPendingManagerRemoval] = useState<{ projectId: string; projectName: string; managerId: string; reportCount: number } | null>(null);
 
   const adminCount = useMemo(() => apiUsers.filter((u) => u.role === "admin").length, [apiUsers]);
 
@@ -63,7 +65,7 @@ function UsersPageContent() {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Assigned as project leader");
     },
-    onError: () => toast.error("Failed to assign project leader"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to assign project leader"),
   });
 
   const { mutate: doRemove } = useMutation({
@@ -73,7 +75,27 @@ function UsersPageContent() {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Removed as project leader");
     },
-    onError: () => toast.error("Failed to remove project leader"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to remove project leader"),
+  });
+
+  const { mutate: doAssignManager } = useMutation({
+    mutationFn: ({ projectId, managerId }: { projectId: string; managerId: string }) =>
+      assignManager(projectId, managerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Assigned as project manager");
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to assign project manager"),
+  });
+
+  const { mutate: doRemoveManager } = useMutation({
+    mutationFn: ({ projectId, managerId }: { projectId: string; managerId: string }) =>
+      removeManager(projectId, managerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Removed as project manager");
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to remove project manager"),
   });
 
   const ledProjectsByUser = useMemo(() => {
@@ -83,6 +105,18 @@ function UsersPageContent() {
         const list = map.get(tl.leader.id) ?? [];
         list.push({ id: project.id, name: project.name });
         map.set(tl.leader.id, list);
+      }
+    }
+    return map;
+  }, [projects]);
+
+  const managedProjectsByUser = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }[]>();
+    for (const project of projects) {
+      for (const pm of project.projectManagers ?? []) {
+        const list = map.get(pm.manager.id) ?? [];
+        list.push({ id: project.id, name: project.name });
+        map.set(pm.manager.id, list);
       }
     }
     return map;
@@ -99,6 +133,19 @@ function UsersPageContent() {
       return;
     }
     doRemove({ projectId, leaderId });
+  };
+
+  const handleRemoveManagerClick = (projectId: string, projectName: string, managerId: string) => {
+    const project = projects.find((p) => p.id === projectId);
+    const isLastManager = (project?.projectManagers?.length ?? 0) <= 1;
+    const reportCount = allReports.filter(
+      (r) => r.projectId === projectId && r.status === Status.forwarded
+    ).length;
+    if (isLastManager && reportCount > 0) {
+      setPendingManagerRemoval({ projectId, projectName, managerId, reportCount });
+      return;
+    }
+    doRemoveManager({ projectId, managerId });
   };
 
   const handleRoleChange = (userId: string, role: Role) => {
@@ -134,6 +181,12 @@ function UsersPageContent() {
             const canBeAssignedAsLeader = u.role === "employee" || u.role === "team_leader";
             const assignableProjects = canBeAssignedAsLeader
               ? projects.filter((p) => !ledProjects.some((lp) => lp.id === p.id))
+              : [];
+            const managedProjects = managedProjectsByUser.get(u.userId ?? "") ?? [];
+            const pendingManagerProjectId = pendingManagerProjectByUser[u.userId ?? ""] ?? "";
+            const canBeAssignedAsManager = u.role === "project_manager";
+            const assignableManagerProjects = canBeAssignedAsManager
+              ? projects.filter((p) => !managedProjects.some((mp) => mp.id === p.id))
               : [];
 
             return (
@@ -211,6 +264,57 @@ function UsersPageContent() {
                     </div>
                   )}
                 </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {managedProjects.map((p) => (
+                    <span
+                      key={p.id}
+                      className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                    >
+                      {p.name}
+                      <button
+                        onClick={() => handleRemoveManagerClick(p.id, p.name, u.userId ?? "")}
+                        aria-label={`Remove management of ${p.name}`}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <UserMinus className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+
+                  {assignableManagerProjects.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={pendingManagerProjectId}
+                        onValueChange={(v) =>
+                          setPendingManagerProjectByUser((prev) => ({ ...prev, [u.userId ?? ""]: v }))
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-40 text-xs">
+                          <SelectValue placeholder="Manage a project..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assignableManagerProjects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!pendingManagerProjectId}
+                        onClick={() => {
+                          doAssignManager({ projectId: pendingManagerProjectId, managerId: u.userId ?? "" });
+                          setPendingManagerProjectByUser((prev) => ({ ...prev, [u.userId ?? ""]: "" }));
+                        }}
+                      >
+                        <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Assign
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -223,8 +327,7 @@ function UsersPageContent() {
             <DialogTitle>Remove leadership of {pendingRemoval?.projectName}?</DialogTitle>
             <DialogDescription>
               This project has {pendingRemoval?.reportCount} report{pendingRemoval?.reportCount === 1 ? "" : "s"} awaiting
-              approval and no other leader — only admins and team leaders will be able to approve them until someone
-              new is assigned.
+              approval and no other leader — only admins will be able to approve them until someone new is assigned.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -235,6 +338,32 @@ function UsersPageContent() {
                 if (!pendingRemoval) return;
                 doRemove({ projectId: pendingRemoval.projectId, leaderId: pendingRemoval.leaderId });
                 setPendingRemoval(null);
+              }}
+            >
+              Remove anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pendingManagerRemoval} onOpenChange={(o) => !o && setPendingManagerRemoval(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove management of {pendingManagerRemoval?.projectName}?</DialogTitle>
+            <DialogDescription>
+              This project has {pendingManagerRemoval?.reportCount} report{pendingManagerRemoval?.reportCount === 1 ? "" : "s"} forwarded
+              for payroll and no other project manager — only admins will be able to send them to payroll until
+              someone new is assigned.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingManagerRemoval(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!pendingManagerRemoval) return;
+                doRemoveManager({ projectId: pendingManagerRemoval.projectId, managerId: pendingManagerRemoval.managerId });
+                setPendingManagerRemoval(null);
               }}
             >
               Remove anyway
